@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.pdf
+reports/*.json
+reports/*.pdf
+data/
+logs/
+.next/

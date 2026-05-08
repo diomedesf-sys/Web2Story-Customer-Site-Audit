@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Website Diagnostic Report - <%= businessName %></title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.7; color: #2d3748; max-width: 1000px; margin: 0 auto; padding: 20px; }
+    h1 { color: #1a365d; text-align: center; border-bottom: 4px solid #2b6cb0; padding-bottom: 15px; }
+    h2 { color: #2b6cb0; border-left: 6px solid #2b6cb0; padding-left: 15px; background: #f7fafc; padding: 10px 15px; }
+    .section { margin: 35px 0; page-break-inside: avoid; }
+    .metric { background: #f7fafc; padding: 18px; border-radius: 8px; margin: 18px 0; border-left: 5px solid #4299e1; }
+    .bad { color: #e53e3e; font-weight: bold; }
+    .warning { color: #ed8936; font-weight: bold; }
+    .good { color: #38a169; font-weight: bold; }
+    .recommendation { background: #fffaf0; padding: 16px; border-left: 6px solid #ed8936; margin: 12px 0; border-radius: 0 4px 4px 0; }
+    .narrative { font-style: italic; color: #4a5568; margin: 10px 0; }
+    footer { text-align: center; margin-top: 60px; color: #718096; font-size: 0.9em; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+    .header { text-align: center; margin-bottom: 40px; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85em; }
+    .score-good { background: #c6f6d5; color: #276749; }
+    .score-bad { background: #fed7d7; color: #9b2c2c; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Comprehensive Website Diagnostic Report</h1>
+    <p><strong><%= businessName %></strong> &bull; Generated on <%= date %></p>
+    <p><strong>Audit URL:</strong> <%= report.url %></p>
+    <% if (report.combinedMetrics) { %>
+    <p>Overall Health: <span class="score-badge <%= report.combinedMetrics.overallHealth === 'Excellent' || report.combinedMetrics.overallHealth === 'Good' ? 'score-good' : 'score-bad' %>"><%= report.combinedMetrics.overallHealth %></span></p>
+    <% } %>
+  </div>
+
+  <!-- 1.1 Core Web Vitals -->
+  <div class="section">
+    <h2>1.1 Core Web Vitals (Performance)</h2>
+    <% if (report.lighthouse) { %>
+    <% const lcp = (report.lighthouse.audits?.['largest-contentful-paint']?.numericValue / 1000) || 0; %>
+    <div class="metric">
+      <strong>LCP (Largest Contentful Paint):</strong> <%= lcp.toFixed(1) %>s
+      <% if (lcp > 2.5) { %><span class="bad"> — FAILING</span><% } else { %><span class="good"> — PASSING</span><% } %>
+    </div>
+    <p class="narrative">Your site takes <%= lcp.toFixed(1) %> seconds to load on mobile. Google penalizes you for this, and approximately 53% of visitors leave before seeing your content.</p>
+    <% if (report.combinedMetrics) { %>
+    <div class="metric">
+      Performance Score: <strong><%= report.combinedMetrics.performanceScore %>/100</strong> &nbsp;|&nbsp;
+      SEO Score: <strong><%= report.combinedMetrics.seoScore %>/100</strong> &nbsp;|&nbsp;
+      Accessibility: <strong><%= report.combinedMetrics.accessibilityScore %>/100</strong>
+    </div>
+    <% } %>
+    <% } else { %>
+    <p class="narrative">Lighthouse data unavailable for this audit.</p>
+    <% } %>
+    <div class="recommendation"><strong>Fix:</strong> Compress images to WebP/AVIF, implement lazy loading, and eliminate render-blocking CSS/JS.</div>
+  </div>
+
+  <!-- 1.2 Traffic & Engagement -->
+  <div class="section">
+    <h2>1.2 Traffic &amp; Engagement Baseline</h2>
+    <% if (report.ga4) { %>
+    <div class="metric">
+      <strong>Bounce Rate:</strong> <%= report.ga4?.bounceRate ? (report.ga4.bounceRate * 100).toFixed(0) : 'N/A' %>%<br>
+      <strong>Avg. Session Duration:</strong> <%= report.ga4?.avgSessionDuration ? Math.round(report.ga4.avgSessionDuration) : 'N/A' %> seconds
+    </div>
+    <% } %>
+    <p class="narrative">You're currently getting limited monthly visitors, but a high percentage leave immediately without engaging. The average visit is very short, resulting in very few goal completions.</p>
+    <div class="recommendation"><strong>Fix:</strong> Redesign the Hero section to pass the 10-Second Clarity Test, chunk content, and strengthen CTAs.</div>
+  </div>
+
+  <!-- 1.3 SEO/AEO Readiness -->
+  <div class="section">
+    <h2>1.3 SEO/AEO Readiness (Visibility)</h2>
+    <p class="narrative">When potential customers search for your services in your city, your site is not ranking on page 1. Additionally, AI platforms (ChatGPT, Perplexity, Google AI Overviews) cannot easily find or recommend your business.</p>
+    <div class="recommendation"><strong>Fix:</strong> Implement Schema Markup, optimize for AI scrapers, and improve crawlability.</div>
+  </div>
+
+  <!-- 1.4 Indexing Errors & Broken Links -->
+  <div class="section">
+    <h2>1.4 Indexing Errors &amp; Broken Links</h2>
+    <% if (report.crawl?.brokenLinks?.length > 0) { %>
+    <div class="metric"><strong>Found <%= report.crawl.brokenLinks.length %> broken links</strong> — these pages are returning errors to visitors and search engines.</div>
+    <% } else { %>
+    <div class="metric"><span class="good">✓ No major broken links detected in crawl.</span></div>
+    <% } %>
+    <% if (report.combinedMetrics) { %>
+    <div class="metric"><strong>Pages Crawled:</strong> <%= report.combinedMetrics.totalPagesCrawled %> &nbsp;|&nbsp; <strong>Schema Found:</strong> <%= report.combinedMetrics.schemaCount %> &nbsp;|&nbsp; <strong>Images:</strong> <%= report.combinedMetrics.imagesCount %></div>
+    <% } %>
+    <p class="narrative">Broken links and indexing issues make your site look unprofessional and waste valuable content that Google cannot crawl.</p>
+    <div class="recommendation"><strong>Fix:</strong> Run full QA testing, remove noindex blocks, and set up proper 301 redirects.</div>
+  </div>
+
+  <!-- 1.5 Mobile Usability & HTTPS -->
+  <div class="section">
+    <h2>1.5 Mobile Usability &amp; HTTPS Compliance</h2>
+    <p class="narrative">Over 60% of your visitors are on mobile, but your site currently suffers from small touch targets, illegible text, and potential horizontal scrolling.</p>
+    <div class="recommendation"><strong>Fix:</strong> Implement fluid typography, 44px+ touch targets, proper responsive stacking, and force HTTPS with SSL.</div>
+  </div>
+
+  <!-- 1.6 Schema & AEO Infrastructure -->
+  <div class="section">
+    <h2>1.6 Schema &amp; AEO Infrastructure</h2>
+    <% const aeo = report.crawl?.totalPages?.[0]?.aeoAssessment; %>
+    <% if (aeo) { %>
+    <div class="metric">
+      AEO Status: <% if (aeo.isAEOReady) { %><span class="good">✓ Ready</span><% } else { %><span class="bad">✗ Not Ready</span><% } %><br>
+      <% if (aeo.foundTypes?.length > 0) { %><strong>Found Schema:</strong> <%= aeo.foundTypes.join(', ') %><br><% } %>
+      <% if (aeo.missingCriticalTypes?.length > 0) { %><strong>Missing Critical Schema:</strong> <span class="bad"><%= aeo.missingCriticalTypes.join(', ') %></span><% } %>
+    </div>
+    <% } %>
+    <p class="narrative">Your site does not speak the language that AI understands. When someone asks ChatGPT or Perplexity "Who are the best services in [city]?", it cannot confidently recommend you.</p>
+    <div class="recommendation"><strong>Fix:</strong> Add JSON-LD Schema (LocalBusiness, FAQ, Organization) and optimize copy for voice/AI.</div>
+  </div>
+
+  <!-- Recommendations -->
+  <div class="section">
+    <h2>Priority Recommendations Summary</h2>
+    <% report.recommendations?.forEach(function(rec) { %>
+    <div class="recommendation"><strong><%= rec.section %>:</strong> <%= rec.action %></div>
+    <% }); %>
+  </div>
+
+  <footer>Generated by Website Audit Engine &bull; Confidential &bull; <%= date %></footer>
+</body>
+</html>
