@@ -2,7 +2,6 @@ import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import { chromium } from 'playwright';
 import fs from 'fs/promises';
-import os from 'os';
 import path from 'path';
 
 export async function runLighthouseAudit(url: string) {
@@ -16,7 +15,6 @@ export async function runLighthouseAudit(url: string) {
       '--no-sandbox',
       '--disable-gpu',
       '--disable-dev-shm-usage',
-      `--user-data-dir=${path.join(os.tmpdir(), 'lh-profile')}`,
     ],
   });
 
