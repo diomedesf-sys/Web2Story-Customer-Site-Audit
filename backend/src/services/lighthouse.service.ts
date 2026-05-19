@@ -1,11 +1,16 @@
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
+import { chromium } from 'playwright';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
 export async function runLighthouseAudit(url: string) {
+  // Use Playwright's Chromium so the same binary works locally and in Docker
+  const chromePath = chromium.executablePath();
+
   const chrome = await chromeLauncher.launch({
+    chromePath,
     chromeFlags: [
       '--headless=new',
       '--no-sandbox',
