@@ -1,0 +1,9 @@
+backend/node_modules
+backend/dist
+backend/reports
+reports
+data
+logs
+frontend
+.git
+*.md

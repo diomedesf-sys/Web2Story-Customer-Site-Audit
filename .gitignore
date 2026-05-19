@@ -1,9 +1,31 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-.env
-*.pdf
-reports/*.json
-reports/*.pdf
-data/
-logs/
 .next/
+
+# Environment — never commit credentials
+.env
+.env.local
+
+# Client audit data — never commit to git
+reports/
+backend/reports/
+
+# Logs
+logs/
+*.log
+
+# Data directory
+data/
+
+# Generated PDFs
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code internals
+.claude/

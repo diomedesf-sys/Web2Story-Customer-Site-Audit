@@ -1,27 +1,49 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci
-COPY . .
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-slim
 WORKDIR /app
 
-# System deps for Playwright + Chromium
-RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
+# Install Playwright system dependencies (Debian/apt-based)
+RUN apt-get update && apt-get install -y \
+    wget \
     ca-certificates \
-    ttf-freefont
-
-RUN npx playwright install --with-deps chromium
+    fonts-liberation \
+    libappindicator3-1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdbus-1-3 \
+    libgdk-pixbuf2.0-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    libgbm1 \
+    libxshmfence1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/src/templates ./src/templates
+COPY backend/package*.json ./
 RUN npm ci --only=production
+
+# Let Playwright download and use its own matched Chromium
+RUN npx playwright install chromium
+
+# Serve the dashboard UI as a static file
+RUN mkdir -p public
+COPY backend/public/index.html ./public/index.html
 
 RUN mkdir -p reports data logs
 

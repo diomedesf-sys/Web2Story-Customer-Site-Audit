@@ -1,0 +1,3511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W2S Eval — Ultimate Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #0f172a;
+    --surface:    #1e293b;
+    --surface-2:  #334155;
+    --paper:      #ffffff;
+    --ink:        #f1f5f9;
+    --ink-2:      #cbd5e1;
+    --muted:      #94a3b8;
+    --line:       #334155;
+    --accent:     #3b82f6;
+    --accent-dim: #1e40af;
+    --good:       #10b981;
+    --good-dim:   #059669;
+    --warn:       #f59e0b;
+    --warn-dim:   #d97706;
+    --bad:        #ef4444;
+    --bad-dim:    #dc2626;
+
+    --serif: "Playfair Display", ui-serif, Georgia, serif;
+    --sans:  "Inter", system-ui, sans-serif;
+    --mono:  ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.5), 0 4px 8px -2px rgba(0, 0, 0, 0.3);
+    --glow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* App bar */
+  .appbar {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(30, 41, 59, 0.85);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .appbar-inner {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    font-family: var(--sans);
+    font-size: 18px; font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .brand .logo {
+    height: 32px;
+    width: auto;
+    display: block;
+  }
+  .brand .meta { font-family: var(--sans); font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+  }
+  .crumbs .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    transition: all .2s;
+  }
+  .crumbs .back:hover { background: var(--surface-2); color: var(--ink); }
+  .crumbs .sep { color: var(--muted); }
+  .crumbs .here { color: var(--ink); font-weight: 600; }
+
+  .appbar-actions { display: flex; gap: 10px; margin-left: auto; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font: inherit; font-size: 14px; font-weight: 500;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn:hover { background: var(--surface-2); color: var(--ink); border-color: var(--muted); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border-color: var(--accent);
+    color: white;
+    box-shadow: var(--shadow);
+  }
+  .btn.primary:hover { box-shadow: var(--glow); transform: translateY(-1px); }
+  .btn.sm { padding: 7px 12px; font-size: 13px; }
+  .btn.ghost { background: transparent; border-color: transparent; }
+  .btn.ghost:hover { background: var(--surface); }
+
+  /* Page */
+  .page {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px 32px 80px;
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Hero */
+  .hero {
+    margin-bottom: 40px;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 10px 0;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .hero .lede {
+    font-size: 16px;
+    color: var(--ink-2);
+    max-width: 680px;
+    margin: 0 0 24px 0;
+  }
+
+  /* Prospect score badge */
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 14px 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: 0.02em;
+    border: 1px solid;
+  }
+  .score-badge .score-num {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .score-badge.green  { background: rgba(34,197,94,.12);  color: #4ade80; border-color: rgba(34,197,94,.3);  }
+  .score-badge.yellow { background: rgba(234,179,8,.12);  color: #facc15; border-color: rgba(234,179,8,.3);  }
+  .score-badge.red    { background: rgba(239,68,68,.12);  color: #f87171; border-color: rgba(239,68,68,.3);  }
+
+  /* Prospect header */
+  .prospect-header {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px;
+    box-shadow: var(--shadow);
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+  .prospect-header .url {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .prospect-header .meta {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .prospect-header .notes {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+  }
+  .prospect-header .actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Tool cards (Layer 1) */
+  .tool-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+  }
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+    transition: all .2s;
+    cursor: pointer;
+  }
+  .tool-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .tool-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .tool-card:hover::before { opacity: 1; }
+  .tool-card > * { position: relative; }
+
+  .tool-card .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 18px;
+  }
+  .tool-card h3 {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.01em;
+  }
+  .tool-card .bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px 0;
+  }
+  .tool-card .bullets li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+  }
+  .tool-card .bullets li::before {
+    content: "—";
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .tool-card .foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px dashed rgba(51, 65, 85, 0.5);
+    padding-top: 16px;
+  }
+  .tool-card .stat {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .tool-card .stat .v {
+    display: block;
+    font-size: 18px;
+    color: var(--ink);
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  .tool-card .arrow {
+    color: var(--muted);
+    font-size: 20px;
+    font-family: var(--mono);
+    transition: color .2s, transform .2s;
+  }
+  .tool-card:hover .arrow {
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .status-pill .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-pill.idle { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+  .status-pill.idle .dot { background: var(--muted); opacity: 0.5; }
+  .status-pill.running { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
+  .status-pill.running .dot { background: var(--accent); animation: pulse 1.2s infinite; }
+  .status-pill.done { background: rgba(16, 185, 129, 0.15); color: var(--good); }
+  .status-pill.done .dot { background: var(--good); }
+  .status-pill.failed { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
+  .status-pill.failed .dot { background: var(--bad); }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* Section hub (Layer 2) */
+  .section-hub {
+    margin-top: 32px;
+  }
+  .section-hub h2 {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.02em;
+  }
+  .section-hub .lede {
+    font-size: 15px;
+    color: var(--muted);
+    margin: 0 0 28px 0;
+  }
+
+  .section-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    transition: all .2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .section-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .section-card h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 6px 0;
+  }
+  .section-card .desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .section-card .arrow {
+    position: absolute;
+    top: 22px;
+    right: 24px;
+    color: var(--muted);
+    font-size: 18px;
+    transition: all .2s;
+  }
+  .section-card:hover .arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  /* Data view (Layer 3) */
+  .data-view {
+    margin-top: 32px;
+  }
+  .data-view h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
+  }
+  .data-view .lede {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0 0 28px 0;
+  }
+
+  /* Data cards */
+  .data-cards {
+    display: grid;
+    gap: 16px;
+  }
+  .data-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 24px;
+    box-shadow: var(--shadow);
+    transition: border-color .2s;
+  }
+  .data-card:hover { border-color: var(--accent); }
+  
+  .data-card.score-card {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+  .data-card .gauge {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    position: relative;
+    background: conic-gradient(var(--ring-color) calc(var(--p) * 1%), rgba(51, 65, 85, 0.5) 0);
+  }
+  .data-card .gauge::after {
+    content: attr(data-v);
+    position: absolute;
+    inset: 6px;
+    background: var(--surface);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .data-card.good .gauge { --ring-color: var(--good); }
+  .data-card.warn .gauge { --ring-color: var(--warn); }
+  .data-card.bad  .gauge { --ring-color: var(--bad); }
+  .data-card .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .data-card .name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .data-card .desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .data-card.metric-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .data-card.metric-card .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .data-card.metric-card .unit {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .data-card.metric-card .value {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: right;
+  }
+  .data-card.metric-card .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-left: 8px;
+  }
+  .data-card.metric-card .badge.pass { background: rgba(16, 185, 129, 0.2); color: var(--good); }
+  .data-card.metric-card .badge.fail { background: rgba(239, 68, 68, 0.2); color: var(--bad); }
+
+  .data-card.opportunity-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .data-card.opportunity-card .priority {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--bad);
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    color: var(--bad);
+  }
+  .data-card.opportunity-card .priority.med { border-color: var(--warn); color: var(--warn); }
+  .data-card.opportunity-card .priority.low { border-color: var(--muted); color: var(--muted); }
+  .data-card.opportunity-card .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .data-card.opportunity-card .desc {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .data-card.opportunity-card .saving {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  .data-card.page-card {
+    cursor: pointer;
+  }
+  .data-card.page-card .summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .data-card.page-card .url {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .data-card.page-card .title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .data-card.page-card .h1 {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .data-card.page-card .expand-icon {
+    color: var(--muted);
+    font-size: 18px;
+    transition: all .2s;
+  }
+  .data-card.page-card:hover .expand-icon {
+    color: var(--accent);
+  }
+  .data-card.page-card .details {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+  }
+  .data-card.page-card.expanded .details {
+    display: block;
+  }
+  .data-card.page-card.expanded .expand-icon {
+    transform: rotate(90deg);
+  }
+  .data-card.page-card .details .row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .data-card.page-card .details .k {
+    color: var(--muted);
+  }
+  .data-card.page-card .details .v {
+    color: var(--ink-2);
+  }
+
+  /* Grid helpers */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1200px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 700px) {
+    .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip {
+    border: 1px solid var(--line);
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+
+  /* Editable fields */
+  .edit-field {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    transition: border-color .2s;
+  }
+  .edit-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+  .edit-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  /* Recommendation card */
+  .data-card.rec-card {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 18px;
+    align-items: start;
+  }
+  .data-card.rec-card .rank {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--muted);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif);
+    font-size: 18px; font-weight: 700;
+  }
+  .data-card.rec-card.high .rank { background: var(--bad); }
+  .data-card.rec-card.med .rank  { background: var(--warn); }
+  .data-card.rec-card.low .rank  { background: var(--muted); }
+  .data-card.rec-card .action {
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .data-card.rec-card .source {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .data-card.rec-card .impact {
+    text-align: right;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .data-card.rec-card .impact .v {
+    display: block;
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink);
+    margin-top: 4px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .data-card.rec-card .notes-area {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+  }
+  .data-card.rec-card .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* Narrative card */
+  .data-card.narrative-card {
+    padding: 28px 32px;
+  }
+  .data-card.narrative-card .ai-ref {
+    background: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+    font-style: italic;
+    color: var(--ink-2);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+  .data-card.narrative-card .ai-ref p {
+    margin: 0 0 12px 0;
+  }
+  .data-card.narrative-card .ai-ref p:last-child {
+    margin: 0;
+  }
+  .data-card.narrative-card .edit-area {
+    margin-top: 18px;
+  }
+  .data-card.narrative-card .bilingual-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 18px;
+  }
+  .data-card.narrative-card .col-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  /* Summary card */
+  .data-card.summary-card {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: var(--accent);
+  }
+  .data-card.summary-card .kv {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px dashed rgba(59, 130, 246, 0.2);
+  }
+  .data-card.summary-card .kv:last-child {
+    border-bottom: 0;
+  }
+  .data-card.summary-card .k {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .data-card.summary-card .v {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+    font-family: var(--mono);
+    text-align: right;
+  }
+  /* ═══════════════════════════════════════════════════════
+     EDITS & EXPORTS
+     ═══════════════════════════════════════════════════════ */
+  .editor-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    height: calc(100vh - 320px);
+    min-height: 500px;
+  }
+  @media (max-width: 1000px) { .editor-shell { grid-template-columns: 1fr; height: auto; } }
+  .editor-pane {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .pane-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 10px 16px;
+    background: rgba(15, 23, 42, 0.5);
+    border-bottom: 1px solid var(--line);
+  }
+  .editor-textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px 20px;
+    resize: none;
+    width: 100%;
+  }
+  .editor-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .editor-preview h1, .editor-preview h2, .editor-preview h3 {
+    color: var(--ink);
+    font-family: var(--serif);
+    margin: 20px 0 10px 0;
+    letter-spacing: -0.01em;
+  }
+  .editor-preview h1 { font-size: 24px; }
+  .editor-preview h2 { font-size: 19px; }
+  .editor-preview h3 { font-size: 16px; }
+  .editor-preview ul { padding-left: 22px; margin: 10px 0; }
+  .editor-preview li { margin: 4px 0; }
+  .editor-preview code { background: rgba(15, 23, 42, 0.6); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .editor-preview pre { background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 6px; overflow-x: auto; }
+  .editor-preview pre code { background: transparent; padding: 0; }
+  .editor-preview strong { color: var(--ink); }
+
+  /* JSON syntax-ish colors (applied to <pre>) */
+  .editor-preview .json-key { color: var(--accent); }
+  .editor-preview .json-string { color: var(--good); }
+  .editor-preview .json-number { color: var(--warn); }
+  .editor-preview .json-bool { color: #c084fc; }
+
+  /* Artifact cards in hub */
+  .artifact-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .artifact-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .artifact-card .file-type {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .artifact-card .file-type.json { background: rgba(245, 158, 11, 0.18); color: var(--warn); }
+  .artifact-card .file-type.md { background: rgba(59, 130, 246, 0.18); color: var(--accent); }
+  .artifact-card .file-type.html { background: rgba(168, 85, 247, 0.18); color: #c084fc; }
+  .artifact-card .file-type.folder { background: rgba(34, 197, 94, 0.18); color: var(--good); }
+  .artifact-card .filename { font-family: var(--mono); font-size: 13px; color: var(--ink); margin-bottom: 4px; font-weight: 500; }
+  .artifact-card .tool-name { font-size: 12px; color: var(--muted); }
+  .artifact-card .meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); display: flex; justify-content: space-between; }
+  .artifact-card .arrow { position: absolute; top: 16px; right: 18px; color: var(--muted); transition: all 0.2s; }
+  .artifact-card:hover .arrow { color: var(--accent); transform: translateX(3px); }
+
+  /* Package file row */
+  .package-file-row {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 18px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+  }
+  .package-file-row input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .package-file-row .filename { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+  .package-file-row .source { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .package-file-row .file-type { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 4px; }
+  .package-file-row .file-type.json { background: rgba(245, 158, 11, 0.18); color: var(--warn); }
+  .package-file-row .file-type.md { background: rgba(59, 130, 246, 0.18); color: var(--accent); }
+  .package-file-row .file-type.png { background: rgba(16, 185, 129, 0.18); color: var(--good); }
+</style>
+</head>
+<body>
+
+<!-- App bar -->
+<div class="appbar">
+  <div class="appbar-inner">
+    <div class="brand">
+      <img src="w2s-logo.png" alt="Web2Story" class="logo">
+      <span>Web2Story Eval</span>
+      <span class="meta">Ultimate Dashboard</span>
+    </div>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="appbar-actions">
+      <button class="btn ghost sm" onclick="alert('prospect history')">Recent</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="page">
+
+  <!-- ============================ LAYER 1: LANDING HUB ============================ -->
+  <div class="view active" id="view-landing">
+    
+    <div class="hero">
+      <h1>Web2Story Eval Console</h1>
+      <p class="lede">Run comprehensive website audits across performance, content, search, and bilingual presence. Each tool runs independently and saves append-mode snapshots to the prospect workspace.</p>
+    </div>
+
+    <div class="prospect-header" id="prospect-header">
+      <div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input type="text" id="prospect-url" placeholder="Enter prospect URL (e.g. taliscpas.com)"
+                 style="font-family:var(--mono);font-size:16px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);width:360px"
+                 value="">
+          <button class="btn primary" id="btn-load-workspace" onclick="handleLoadWorkspace()">Load</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="url" id="prospect-hostname" style="display:none"></div>
+          <div id="prospect-score-badge" style="display:none"></div>
+        </div>
+        <div class="meta" id="prospect-meta"></div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px">
+          <div class="notes" id="prospect-notes-display" style="display:none">
+            <strong>Prospect notes:</strong> <span id="prospect-notes-text"></span>
+            <button class="btn ghost sm" style="margin-left:8px" onclick="toggleNotesEdit()">Edit</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;color:var(--muted)">Industry:</span>
+            <input type="text" id="prospect-category-input"
+                   placeholder="e.g. plumber"
+                   style="font-size:13px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);width:160px"
+                   onblur="saveCategory()">
+          </div>
+        </div>
+        <div id="prospect-notes-edit" style="display:none;margin-top:8px">
+          <textarea id="prospect-notes-input" rows="3" style="width:100%;font-family:var(--sans);font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);resize:vertical" placeholder="Add prospect notes…"></textarea>
+          <div style="margin-top:6px;display:flex;gap:8px">
+            <button class="btn primary sm" onclick="saveNotes()">Save notes</button>
+            <button class="btn ghost sm" onclick="toggleNotesEdit()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="btn-recent" onclick="showRecentWorkspaces()">Recent prospects</button>
+      </div>
+    </div>
+
+    <div class="tool-cards" id="tool-cards"></div>
+
+  </div>
+
+  <!-- ============================ LAYER 2: LIGHTHOUSE SECTIONS ============================ -->
+  <div class="view" id="view-lighthouse-hub">
+    <div class="section-hub">
+      <h2>Lighthouse</h2>
+      <p class="lede">Performance, SEO, accessibility, and best practices audit powered by Google Lighthouse.</p>
+      <div class="section-cards" id="lighthouse-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: LIGHTHOUSE DATA ============================ -->
+  
+  <!-- Overall Scores -->
+  <div class="view" id="view-lighthouse-scores">
+    <div class="data-view">
+      <h2>Overall Scores</h2>
+      <p class="lede">Four category scores — Performance, SEO, Accessibility, Best Practices.</p>
+      <div class="data-cards grid-4" id="lighthouse-scores-data"></div>
+    </div>
+  </div>
+
+  <!-- Core Web Vitals -->
+  <div class="view" id="view-lighthouse-vitals">
+    <div class="data-view">
+      <h2>Core Web Vitals</h2>
+      <p class="lede">Six key metrics measuring page experience on mobile.</p>
+      <div class="data-cards grid-3" id="lighthouse-vitals-data"></div>
+    </div>
+  </div>
+
+  <!-- Optimization Opportunities -->
+  <div class="view" id="view-lighthouse-opportunities">
+    <div class="data-view">
+      <h2>Optimization Opportunities</h2>
+      <p class="lede">Actionable improvements with estimated savings.</p>
+      <div class="data-cards" id="lighthouse-opportunities-data"></div>
+    </div>
+  </div>
+
+  <!-- SEO & Best Practices -->
+  <div class="view" id="view-lighthouse-findings">
+    <div class="data-view">
+      <h2>SEO & Best Practices Findings</h2>
+      <p class="lede">Issues flagged by Lighthouse audits.</p>
+      <div class="data-cards" id="lighthouse-findings-data"></div>
+    </div>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="view" id="view-lighthouse-stack">
+    <div class="data-view">
+      <h2>Detected Tech Stack</h2>
+      <p class="lede">Technologies detected by Lighthouse.</p>
+      <div class="chips" id="lighthouse-stack-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: CRAWLER SECTIONS ============================ -->
+  <div class="view" id="view-crawler-hub">
+    <div class="section-hub">
+      <h2>Site Crawler</h2>
+      <p class="lede">Deep DFS crawl capturing content, images, schema, broken links, and readability.</p>
+      <div id="crawler-technical-signals" style="margin-bottom:28px"></div>
+      <div class="section-cards" id="crawler-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: CRAWLER DATA ============================ -->
+  
+  <!-- Page Content Inventory -->
+  <div class="view" id="view-crawler-pages">
+    <div class="data-view">
+      <h2>Page Content Inventory</h2>
+      <p class="lede">All crawled pages — click any row to expand full details.</p>
+      <div class="data-cards" id="crawler-pages-data"></div>
+    </div>
+  </div>
+
+  <!-- Broken Links -->
+  <div class="view" id="view-crawler-broken">
+    <div class="data-view">
+      <h2>Broken Links</h2>
+      <p class="lede">All 4xx errors found during the crawl.</p>
+      <div class="data-cards" id="crawler-broken-data"></div>
+    </div>
+  </div>
+
+  <!-- Image Inventory -->
+  <div class="view" id="view-crawler-images">
+    <div class="data-view">
+      <h2>Image Inventory</h2>
+      <p class="lede">All images found during crawl — filterable by missing alt text.</p>
+      <div class="data-cards" id="crawler-images-data"></div>
+    </div>
+  </div>
+
+  <!-- Schema & AEO -->
+  <div class="view" id="view-crawler-schema">
+    <div class="data-view">
+      <h2>Schema & AEO Assessment</h2>
+      <p class="lede">Schema coverage and AEO readiness per page.</p>
+      <div class="data-cards" id="crawler-schema-data"></div>
+    </div>
+  </div>
+
+  <!-- Readability -->
+  <div class="view" id="view-crawler-readability">
+    <div class="data-view">
+      <h2>Readability & Voice Readiness</h2>
+      <p class="lede">Flesch reading ease scores per page.</p>
+      <div class="data-cards" id="crawler-readability-data"></div>
+    </div>
+  </div>
+
+  <!-- Screenshots -->
+  <div class="view" id="view-crawler-screenshots">
+    <div class="data-view">
+      <h2>Screenshots</h2>
+      <p class="lede">Captured page renders — click to expand full image.</p>
+      <div class="data-cards grid-3" id="crawler-screenshots-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: PUBLIC PULSE SECTIONS ============================ -->
+  <div class="view" id="view-broad-traffic-hub">
+    <div class="section-hub">
+      <h2>Public Pulse</h2>
+      <p class="lede">Public signals — traffic estimates, business profile, ad spend, social footprint, and competitor comparison.</p>
+      <div class="section-cards" id="broad-traffic-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: PUBLIC PULSE DATA ============================ -->
+  <div class="view" id="view-broad-traffic-overview">
+    <div class="data-view">
+      <h2>Traffic Overview</h2>
+      <p class="lede">Estimated monthly visits, traffic sources, and bounce rate.</p>
+      <div class="data-cards grid-4" id="broad-traffic-overview-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-broad-traffic-gbp">
+    <div class="data-view">
+      <h2>Google Business Profile</h2>
+      <p class="lede">Reviews, rating, photos, posts, and Q&A activity.</p>
+      <div class="data-cards" id="broad-traffic-gbp-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-broad-traffic-ads">
+    <div class="data-view">
+      <h2>Ad Spend Detection</h2>
+      <p class="lede">Meta Ad Library + Google Ads Transparency — are they spending money on a broken site?</p>
+      <div class="data-cards" id="broad-traffic-ads-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-broad-traffic-social">
+    <div class="data-view">
+      <h2>Social Footprint</h2>
+      <p class="lede">Instagram & Facebook — followers, post frequency, last post date.</p>
+      <div class="data-cards" id="broad-traffic-social-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-broad-traffic-index">
+    <div class="data-view">
+      <h2>Index Status</h2>
+      <p class="lede">How many pages Google has indexed — gaps signal technical problems.</p>
+      <div class="data-cards" id="broad-traffic-index-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-broad-traffic-competitor">
+    <div class="data-view">
+      <h2>Competitor Comparison</h2>
+      <p class="lede">Side-by-side vs. top-ranking competitor for their main keyword.</p>
+      <div class="data-cards" id="broad-traffic-competitor-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: OPEN BOOKS SECTIONS ============================ -->
+  <div class="view" id="view-deep-traffic-hub">
+    <div class="section-hub">
+      <h2>Open Books</h2>
+      <p class="lede">Authenticated data — GA4 analytics and Google Search Console after client grants access.</p>
+      <div class="section-cards" id="deep-traffic-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: OPEN BOOKS DATA ============================ -->
+  <div class="view" id="view-deep-traffic-ga4-summary">
+    <div class="data-view">
+      <h2>GA4 — 30-Day Summary</h2>
+      <p class="lede">Sessions, engagement rate, and conversions.</p>
+      <div class="data-cards grid-4" id="deep-traffic-ga4-summary-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-ga4-pages">
+    <div class="data-view">
+      <h2>GA4 — Per-Page Performance</h2>
+      <p class="lede">Traffic, bounce, and duration by page.</p>
+      <div class="data-cards" id="deep-traffic-ga4-pages-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-ga4-devices">
+    <div class="data-view">
+      <h2>GA4 — Device & Language Breakdown</h2>
+      <p class="lede">Mobile vs desktop split + Spanish-speaking visitor data.</p>
+      <div class="data-cards" id="deep-traffic-ga4-devices-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-ga4-flow">
+    <div class="data-view">
+      <h2>GA4 — Landing & Exit Pages</h2>
+      <p class="lede">Where people arrive and where they leave.</p>
+      <div class="data-cards" id="deep-traffic-ga4-flow-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-gsc-summary">
+    <div class="data-view">
+      <h2>GSC — Search Performance</h2>
+      <p class="lede">Clicks, impressions, CTR, and average position.</p>
+      <div class="data-cards grid-4" id="deep-traffic-gsc-summary-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-gsc-almost">
+    <div class="data-view">
+      <h2>GSC — Almost-Ranking Pages</h2>
+      <p class="lede">Positions 11–20 — one push away from page 1.</p>
+      <div class="data-cards" id="deep-traffic-gsc-almost-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-gsc-lowctr">
+    <div class="data-view">
+      <h2>GSC — High Impression / Low CTR</h2>
+      <p class="lede">Pages Google shows but nobody clicks — title & meta opportunity.</p>
+      <div class="data-cards" id="deep-traffic-gsc-lowctr-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-deep-traffic-gsc-coverage">
+    <div class="data-view">
+      <h2>GSC — Index Coverage Errors</h2>
+      <p class="lede">Pages Google tried to crawl and failed.</p>
+      <div class="data-cards" id="deep-traffic-gsc-coverage-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LEGACY GSC HUB (kept for backward compat) ============================ -->
+  <div class="view" id="view-gsc-hub" style="display:none">
+    <div class="section-hub">
+      <h2>Google Search Console</h2>
+      <div class="section-cards" id="gsc-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: GSC DATA ============================ -->
+  <div class="view" id="view-gsc-summary">
+    <div class="data-view">
+      <h2>Search Performance Summary</h2>
+      <p class="lede">30-day aggregate metrics.</p>
+      <div class="data-cards grid-4" id="gsc-summary-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-gsc-pages">
+    <div class="data-view">
+      <h2>Top Pages by Clicks</h2>
+      <p class="lede">Pages ranked by search clicks.</p>
+      <div class="data-cards" id="gsc-pages-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-gsc-almost">
+    <div class="data-view">
+      <h2>Almost-Ranking Pages</h2>
+      <p class="lede">Pages in positions 11–20 — close to page 1.</p>
+      <div class="data-cards" id="gsc-almost-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-gsc-lowctr">
+    <div class="data-view">
+      <h2>High Impression / Low CTR</h2>
+      <p class="lede">Pages with 500+ impressions but under 2% CTR — title/meta opportunity.</p>
+      <div class="data-cards" id="gsc-lowctr-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: BILINGUAL SECTIONS ============================ -->
+  <div class="view" id="view-bilingual-hub">
+    <div class="section-hub">
+      <h2>Bilingual Audit</h2>
+      <p class="lede">Language coverage, translation gaps, hreflang, and content parity.</p>
+      <div class="section-cards" id="bilingual-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: BILINGUAL DATA ============================ -->
+  <div class="view" id="view-bilingual-coverage">
+    <div class="data-view">
+      <h2>Language Coverage Summary</h2>
+      <p class="lede">English vs. Spanish page count and coverage percentage.</p>
+      <div class="data-cards" id="bilingual-coverage-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-bilingual-gaps">
+    <div class="data-view">
+      <h2>Translation Gap Report</h2>
+      <p class="lede">English pages missing Spanish equivalents.</p>
+      <div class="data-cards" id="bilingual-gaps-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-bilingual-hreflang">
+    <div class="data-view">
+      <h2>hreflang Audit</h2>
+      <p class="lede">Pages with hreflang issues.</p>
+      <div class="data-cards" id="bilingual-hreflang-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: RECOMMENDATIONS SECTIONS ============================ -->
+  <div class="view" id="view-recommendations-hub">
+    <div class="section-hub">
+      <h2>Recommendations</h2>
+      <p class="lede">Synthesized priority actions across all evaluations — editable operator notes.</p>
+      <div class="section-cards" id="recommendations-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: RECOMMENDATIONS DATA ============================ -->
+  <div class="view" id="view-recommendations-quickwins">
+    <div class="data-view">
+      <h2>Quick Wins</h2>
+      <p class="lede">High impact, low effort items.</p>
+      <div class="data-cards" id="recommendations-quickwins-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-recommendations-technical">
+    <div class="data-view">
+      <h2>Technical Fixes</h2>
+      <p class="lede">Lighthouse-sourced performance, accessibility, and best practices items.</p>
+      <div class="data-cards" id="recommendations-technical-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-recommendations-content">
+    <div class="data-view">
+      <h2>Content Opportunities</h2>
+      <p class="lede">Crawler + GSC-sourced — thin content, almost-ranking pages, missing meta.</p>
+      <div class="data-cards" id="recommendations-content-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-recommendations-engagement">
+    <div class="data-view">
+      <h2>Engagement Fixes</h2>
+      <p class="lede">GA4-sourced — high-bounce pages, low-duration pages, conversion drop-offs.</p>
+      <div class="data-cards" id="recommendations-engagement-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-recommendations-bilingual">
+    <div class="data-view">
+      <h2>Bilingual Gaps</h2>
+      <p class="lede">Bilingual Audit-sourced — translation priorities, hreflang fixes, content parity.</p>
+      <div class="data-cards" id="recommendations-bilingual-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: NARRATIVE SECTIONS ============================ -->
+  <div class="view" id="view-narrative-hub">
+    <div class="section-hub">
+      <h2>Narrative Report</h2>
+      <p class="lede">Editable prose synthesis for prospect-facing storytelling — bilingual English/Spanish.</p>
+      <div class="section-cards" id="narrative-sections"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: NARRATIVE DATA ============================ -->
+  <div class="view" id="view-narrative-summary">
+    <div class="data-view">
+      <h2>Executive Summary</h2>
+      <p class="lede">High-level synthesis drawn from all tools.</p>
+      <div class="data-cards" id="narrative-summary-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-narrative-technical">
+    <div class="data-view">
+      <h2>Technical Health</h2>
+      <p class="lede">Lighthouse-sourced prose.</p>
+      <div class="data-cards" id="narrative-technical-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-narrative-content">
+    <div class="data-view">
+      <h2>Content & SEO</h2>
+      <p class="lede">Crawler + GSC-sourced prose.</p>
+      <div class="data-cards" id="narrative-content-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-narrative-traffic">
+    <div class="data-view">
+      <h2>Traffic & Engagement</h2>
+      <p class="lede">GA4-sourced prose.</p>
+      <div class="data-cards" id="narrative-traffic-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-narrative-bilingual">
+    <div class="data-view">
+      <h2>Bilingual Presence</h2>
+      <p class="lede">Bilingual Audit-sourced prose — editable in English and Spanish.</p>
+      <div class="data-cards" id="narrative-bilingual-data"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-narrative-opportunity">
+    <div class="data-view">
+      <h2>The Opportunity</h2>
+      <p class="lede">The sales narrative — most important section to edit before a client conversation. Editable in English and Spanish.</p>
+      <div class="data-cards" id="narrative-opportunity-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 2: EDITS & EXPORTS HUB ============================ -->
+  <div class="view" id="view-edits-hub">
+    <div class="section-hub">
+      <h2>Edits & Exports</h2>
+      <p class="lede">Edit any generated artifact inline, then bundle the workspace into a Page Builder package, prospect-facing presentation, or full archive.</p>
+
+      <h3 style="font-size:14px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-top:32px; margin-bottom:14px">Artifacts</h3>
+      <div class="section-cards" id="edits-artifact-cards"></div>
+
+      <h3 style="font-size:14px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-top:40px; margin-bottom:14px">Packaged exports</h3>
+      <div class="section-cards" id="edits-package-cards"></div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: EDITS EDITOR ============================ -->
+  <div class="view" id="view-edits-editor">
+    <div class="data-view">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:8px; flex-wrap:wrap">
+        <div>
+          <h2 id="editor-filename" style="margin:0; font-family:var(--mono); font-size:22px">file.json</h2>
+          <p class="lede" id="editor-meta" style="margin-top:4px">JSON · 0 KB · Last modified —</p>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn sm ghost" onclick="alert('reset to last saved')">Reset</button>
+          <button class="btn sm" onclick="alert('copy to clipboard')">Copy</button>
+          <button class="btn sm" onclick="alert('download file')">Download</button>
+          <button class="btn primary sm" onclick="alert('save changes')">Save</button>
+        </div>
+      </div>
+
+      <div class="editor-shell">
+        <div class="editor-pane">
+          <div class="pane-label">Source</div>
+          <textarea class="editor-textarea" id="editor-source" spellcheck="false"></textarea>
+        </div>
+        <div class="editor-pane" id="editor-preview-pane">
+          <div class="pane-label">Preview</div>
+          <div class="editor-preview" id="editor-preview"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px; padding:14px 16px; background:rgba(15,23,42,0.5); border:1px solid var(--line); border-radius:8px; font-size:12px; color:var(--muted)">
+        <strong style="color:var(--accent)">Note:</strong> Changes are stored to <code style="background:rgba(15,23,42,0.7);padding:2px 6px;border-radius:4px;color:var(--ink)">reports/{hostname}/edits/</code> on save. The original capture file is never modified — edits are layered on top.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ LAYER 3: PACKAGE BUILDER ============================ -->
+  <div class="view" id="view-edits-package">
+    <div class="data-view">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:24px; flex-wrap:wrap">
+        <div>
+          <h2 id="package-name" style="margin:0">Package Builder</h2>
+          <p class="lede" id="package-desc" style="margin-top:4px">Select files to include, then build &amp; download.</p>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn primary sm" onclick="alert('Build & download .zip')">Build &amp; Download</button>
+        </div>
+      </div>
+
+      <div class="data-cards" id="package-files-list"></div>
+
+      <div style="margin-top:18px; padding:14px 16px; background:rgba(59,130,246,0.08); border-left:3px solid var(--accent); border-radius:8px; font-size:13px; color:var(--ink-2)">
+        <strong style="color:var(--accent)">Output:</strong> <code style="font-family:var(--mono);background:rgba(15,23,42,0.5);padding:2px 6px;border-radius:4px">{hostname}-{package}-{date}.zip</code>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ============================ API-CONNECTED SCRIPT ============================ -->
+<script>
+  /* ═══════════════════════════════════════════════════════
+     API CLIENT & STATE
+     ═══════════════════════════════════════════════════════ */
+  const API = window.location.protocol === 'file:' ? 'http://localhost:3001' : '';
+  const STATE = { hostname: null, workspace: null };
+
+  async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${API}${path}`, opts);
+    const json = await res.json();
+    if (!res.ok || json.success === false) throw new Error(json.error || `API ${res.status}`);
+    return json.data !== undefined ? json.data : json;
+  }
+
+  function hostnameFromUrl(url) {
+    try {
+      const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return parsed.hostname.replace(/^www\./, '');
+    } catch { return url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''); }
+  }
+
+  function clearGrid(id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; }
+
+  function showToast(msg, isError) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:'fixed',bottom:'24px',right:'24px',padding:'12px 20px',borderRadius:'10px',zIndex:'9999',
+      fontSize:'13px',fontWeight:'600',color:'#fff',
+      background: isError ? 'var(--bad)' : 'var(--good)',
+      boxShadow:'0 4px 20px rgba(0,0,0,0.3)', transition:'opacity 0.3s'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     DATA TRANSFORMERS  (API shape -> render shape)
+     ═══════════════════════════════════════════════════════ */
+  function captureData(tool) {
+    const slot = STATE.workspace?.captures?.[tool];
+    return slot?.latest?.data || null;
+  }
+
+  function toolStatus(tool) {
+    if (tool === 'deep-traffic') {
+      const ga4 = STATE.workspace?.captures?.['ga4'];
+      const gsc = STATE.workspace?.captures?.['gsc'];
+      if (!ga4?.latest && !gsc?.latest) return { status: 'idle', stat: 'Not run' };
+      const parts = [];
+      if (ga4?.latest) parts.push('GA4');
+      if (gsc?.latest) parts.push('GSC');
+      return { status: 'done', stat: parts.join(' + ') };
+    }
+    const slot = STATE.workspace?.captures?.[tool];
+    if (!slot?.latest) return { status: 'idle', stat: 'Not run' };
+    return { status: 'done', stat: toolStat(tool, slot.latest.data) };
+  }
+
+  function toolStat(tool, data) {
+    if (!data) return 'No data';
+    switch (tool) {
+      case 'lighthouse': {
+        const perf = data?.categories?.performance?.score;
+        return perf != null ? `Score ${Math.round(perf * 100)}` : 'Complete';
+      }
+      case 'crawl': return `${data.pagesCrawled || data.totalPages?.length || 0} pages`;
+      case 'ga4': {
+        const rows = data?.rows || [];
+        const total = rows.reduce((s,r) => s + Number(r.metricValues?.[0]?.value || 0), 0);
+        return total > 0 ? `${total.toLocaleString()} sessions` : 'Complete';
+      }
+      case 'gsc': {
+        const rows = data?.rows || [];
+        const clicks = rows.reduce((s,r) => s + (r.clicks || 0), 0);
+        return clicks > 0 ? `${clicks.toLocaleString()} clicks` : 'Complete';
+      }
+      case 'bilingual': return `${data.coverage?.coveragePercent || 0}% coverage`;
+      case 'recommendations': {
+        if (!Array.isArray(data)) return '0 actions';
+        const buckets = bucketRecommendations(data);
+        const qw = buckets.quickwins.length;
+        return qw > 0 ? `${qw} quick win${qw !== 1 ? 's' : ''} · ${data.length} total` : `${data.length} actions`;
+      }
+      case 'narrative': return Array.isArray(data) ? 'Draft ready' : 'Complete';
+      default: return 'Complete';
+    }
+  }
+
+  const TOOL_DEFS = [
+    { id: "broad-traffic", name: "Public Pulse", bullets: ["Estimated visits, sources & bounce rate", "Google Business Profile — reviews & engagement", "Ad spend detection (Meta + Google Ads)", "Social footprint & index status"], captureEndpoint: "/api/capture/broad-traffic", bodyKey: "url" },
+    { id: "lighthouse", name: "Lighthouse", bullets: ["Performance, SEO, accessibility scores", "Core Web Vitals & optimization opportunities", "Detected tech stack"], captureEndpoint: "/api/capture/lighthouse", bodyKey: "url" },
+    { id: "crawler", name: "Site Crawler", bullets: ["Page content, headings, meta tags", "Screenshots & broken links report", "Readability scores"], captureEndpoint: "/api/capture/crawl", bodyKey: "url" },
+    { id: "bilingual", name: "Bilingual Audit", bullets: ["Language coverage & translation gaps", "hreflang implementation", "Content & schema parity"], captureEndpoint: "/api/analyze/bilingual", bodyKey: "hostname" },
+    { id: "deep-traffic", name: "Open Books", bullets: ["GA4 — sessions, devices, language & location", "GA4 — landing pages, exit pages, conversions", "GSC — queries, rankings & index coverage", "Requires client GA4 + GSC credentials"], captureEndpoint: "/api/capture/deep-traffic", bodyKey: "url", needsCredentials: true },
+    { id: "recommendations", name: "Recommendations", bullets: ["Synthesizes priority actions"], captureEndpoint: "/api/analyze/recommendations", bodyKey: "hostname", deps: [['lighthouse','Lighthouse'],['crawl','Crawler'],['ga4','GA4'],['gsc','GSC'],['bilingual','Bilingual']] },
+    { id: "narrative", name: "Narrative Report", bullets: ["Prose synthesis of findings", "Bilingual - English and Spanish"], captureEndpoint: "/api/analyze/narrative", bodyKey: "hostname", deps: [['lighthouse','Lighthouse'],['crawl','Crawler'],['ga4','GA4'],['gsc','GSC'],['bilingual','Bilingual'],['recommendations','Recs']] },
+    { id: "edits", name: "Edits & Exports", bullets: ["Edit JSON & Markdown artifacts inline", "Build packages for Page Builder, prospect, or archive", "Copy or download any file"], captureEndpoint: null, bodyKey: null, isEditor: true }
+  ];
+
+  // Lighthouse LHR -> dashboard shapes
+  function transformLighthouseScores(lhr) {
+    if (!lhr?.categories) return [];
+    const map = { performance: 'Performance', seo: 'SEO', accessibility: 'Accessibility', 'best-practices': 'Best Practices' };
+    const descs = { performance: 'Mobile, throttled', seo: 'Meta & crawl', accessibility: 'Axe-core checks', 'best-practices': 'Security, etc.' };
+    return Object.entries(map).map(([key, category]) => {
+      const score = Math.round((lhr.categories[key]?.score || 0) * 100);
+      return { category, score, severity: score >= 90 ? 'good' : score >= 50 ? 'warn' : 'bad', desc: descs[key] };
+    });
+  }
+
+  function transformLighthouseVitals(lhr) {
+    if (!lhr?.audits) return [];
+    const defs = [
+      { id: 'largest-contentful-paint', name: 'LCP', target: 2500, unit: 'target ≤ 2.5s', fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'interaction-to-next-paint', name: 'INP', target: 200, unit: 'target ≤ 200ms', fmt: v => Math.round(v) + 'ms' },
+      { id: 'cumulative-layout-shift', name: 'CLS', target: 0.1, unit: 'target ≤ 0.1', fmt: v => v.toFixed(2) },
+      { id: 'first-contentful-paint', name: 'FCP', target: 1800, unit: 'target ≤ 1.8s', fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'total-blocking-time', name: 'TBT', target: 200, unit: 'target ≤ 200ms', fmt: v => Math.round(v) + 'ms' },
+      { id: 'speed-index', name: 'Speed Index', target: 2800, unit: 'target ≤ 2.8s', fmt: v => (v/1000).toFixed(1) + 's' }
+    ];
+    return defs.map(d => {
+      const audit = lhr.audits[d.id];
+      const raw = audit?.numericValue ?? 0;
+      return { name: d.name, value: d.fmt(raw), unit: d.unit, pass: raw <= d.target };
+    });
+  }
+
+  function transformLighthouseOpportunities(lhr) {
+    if (!lhr?.audits) return [];
+    const opIds = ['unused-javascript', 'unused-css-rules', 'render-blocking-resources', 'uses-responsive-images',
+                   'offscreen-images', 'uses-webp-images', 'uses-optimized-images', 'unminified-css', 'unminified-javascript'];
+    return opIds.map(id => lhr.audits[id]).filter(a => a && a.score !== null && a.score < 1)
+      .map(a => {
+        const savings = a.details?.overallSavingsBytes;
+        const savingStr = savings ? `−${Math.round(savings / 1024)} KB` : '';
+        const priority = savings > 100000 ? 'high' : savings > 30000 ? 'med' : 'low';
+        return { priority, name: a.title, desc: a.description?.split('.')[0] || '', saving: savingStr };
+      }).sort((a,b) => ({ high:0,med:1,low:2 }[a.priority] - { high:0,med:1,low:2 }[b.priority]));
+  }
+
+  function transformLighthouseFindings(lhr) {
+    if (!lhr?.audits) return [];
+    const findIds = ['meta-description', 'link-text', 'color-contrast', 'image-alt', 'document-title',
+                     'html-has-lang', 'robots-txt', 'crawlable-anchors', 'is-crawlable'];
+    return findIds.map(id => lhr.audits[id]).filter(a => a && a.score !== null && a.score < 1)
+      .map(a => {
+        const count = a.details?.items?.length || 0;
+        const priority = a.scoreDisplayMode === 'binary' ? 'high' : count > 5 ? 'high' : count > 0 ? 'med' : 'low';
+        return { priority, name: a.title, desc: count > 0 ? `${count} issue(s)` : a.description?.split('.')[0] || '' };
+      });
+  }
+
+  function transformLighthouseStack(lhr) {
+    if (!lhr?.stackPacks) return [];
+    return lhr.stackPacks.map(sp => sp.title || sp.id);
+  }
+
+  // Crawl -> dashboard shapes
+  function transformCrawlerPages(crawl) {
+    if (!crawl?.totalPages) return [];
+    return crawl.totalPages.map(p => {
+      const h2Count = (p.headings || []).filter((_, i) => i > 0).length;
+      const words = (p.fullText || '').split(/\s+/).filter(Boolean).length;
+      const h1 = p.headings?.[0] || null;
+      return {
+        url: p.url, title: p.title || '(untitled)', meta: p.metaDescription, h1, h2h3: `${h2Count} headings`, words,
+        duplicateOf: p.duplicateOf || null,
+        isThinContent: p.isThinContent,
+        titleIssue: p.titleIssue,
+        hasViewportMeta: p.hasViewportMeta,
+        canonicalUrl: p.canonicalUrl || '',
+        canonicalMismatch: p.canonicalMismatch,
+        robotsMeta: p.robotsMeta || '',
+        isNoindexed: (p.robotsMeta || '').toLowerCase().includes('noindex'),
+        htmlLang: p.htmlLang || '',
+        consoleErrors: p.consoleErrors?.length || 0,
+        pageWeightKB: p.pageWeightBytes ? Math.round(p.pageWeightBytes / 1024) : 0,
+        formFieldCount: p.formFieldCount || 0,
+        missingAltCount: p.missingAltCount || 0,
+        ogTitle: p.ogTags?.title || '',
+        ogImage: p.ogTags?.image || '',
+        twitterCard: p.ogTags?.twitterCard || '',
+        hreflangCount: p.hreflangTags?.length || 0,
+      };
+    });
+  }
+
+  function transformCrawlerBroken(crawl) {
+    if (!crawl?.brokenLinks) return [];
+    return crawl.brokenLinks.map(b => ({
+      url: b.url || b.href, status: String(b.statusCode || b.status || '4xx'),
+      foundOn: b.foundOn || b.sourceUrl || '?', anchor: b.anchorText || b.anchor || '(link)'
+    }));
+  }
+
+  function transformCrawlerImages(crawl) {
+    if (!crawl?.allImages) return [];
+    return crawl.allImages.slice(0, 50).map(img => ({
+      src: img.src, alt: img.alt || '', page: img.foundOn || '/',
+      dimensions: (img.width && img.height) ? `${img.width}x${img.height}` : '?',
+      lazyLoad: img.loading === 'lazy', missingAlt: !img.alt
+    }));
+  }
+
+  function transformCrawlerSchema(crawl) {
+    if (!crawl?.totalPages) return [];
+    return crawl.totalPages.filter(p => p.aeoAssessment).map(p => ({
+      url: p.url, types: p.aeoAssessment.foundTypes || [],
+      missing: p.aeoAssessment.missingCriticalTypes || [], aeoReady: p.aeoAssessment.isAEOReady
+    }));
+  }
+
+  function transformCrawlerReadability(crawl) {
+    if (!crawl?.totalPages) return [];
+    return crawl.totalPages.filter(p => p.voiceAssessment).map(p => ({
+      url: p.url, flesch: p.voiceAssessment.easeScore,
+      grade: p.voiceAssessment.gradeLevel, voiceReady: p.voiceAssessment.isVoiceReady
+    }));
+  }
+
+  function transformCrawlerScreenshots(crawl) {
+    if (!crawl?.totalPages) return [];
+    const hostname = STATE.hostname || '';
+    // Build a lookup from filename -> web path using the screenshots array
+    const screenshotMap = {};
+    (crawl.screenshots || []).forEach(absPath => {
+      const filename = absPath.replace(/\\/g, '/').split('/').pop();
+      if (filename) screenshotMap[filename] = `/reports/${hostname}/screenshots/${filename}`;
+    });
+    return crawl.totalPages.slice(0, 12).map(p => {
+      const pathPart = p.url.replace(/https?:\/\/[^/]+/, '') || '/';
+      const expectedFile = `screenshot-${pathPart.replace(/\//g, '-')}.png`;
+      const realThumb = screenshotMap[expectedFile] || null;
+      const svgPlaceholder = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%231e293b' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='monospace' font-size='11'%3E${encodeURIComponent(pathPart)}%3C/text%3E%3C/svg%3E`;
+      return { url: p.url, thumb: realThumb || svgPlaceholder, isReal: !!realThumb };
+    });
+  }
+
+  // GA4 -> dashboard shapes
+  function transformGA4Summary(ga4) {
+    if (!ga4?.rows) return [];
+    const rows = ga4.rows;
+    let totalSessions = 0, totalConversions = 0, weightedBounce = 0, weightedDuration = 0;
+    rows.forEach(r => {
+      const vals = r.metricValues || [];
+      const sessions = Number(vals[0]?.value || 0);
+      totalSessions += sessions;
+      weightedBounce += Number(vals[1]?.value || 0) * sessions;
+      weightedDuration += Number(vals[2]?.value || 0) * sessions;
+      totalConversions += Number(vals[3]?.value || 0);
+    });
+    const avgBounce = totalSessions > 0 ? (weightedBounce / totalSessions * 100) : 0;
+    const avgDuration = totalSessions > 0 ? weightedDuration / totalSessions : 0;
+    const mins = Math.floor(avgDuration / 60); const secs = Math.round(avgDuration % 60);
+    return [
+      { name: "Total Sessions", value: totalSessions.toLocaleString(), sub: "" },
+      { name: "Avg. Bounce Rate", value: `${Math.round(avgBounce)}%`, sub: "" },
+      { name: "Avg. Session Duration", value: `${mins}:${String(secs).padStart(2,'0')}`, sub: "" },
+      { name: "Conversions", value: totalConversions.toLocaleString(), sub: totalSessions > 0 ? `${(totalConversions/totalSessions*100).toFixed(1)}% of sessions` : '' }
+    ];
+  }
+
+  function transformGA4Pages(ga4) {
+    if (!ga4?.rows) return [];
+    return ga4.rows.map(r => {
+      const page = r.dimensionValues?.[0]?.value || '/';
+      const vals = r.metricValues || [];
+      const sessions = Number(vals[0]?.value || 0);
+      const bounce = Number(vals[1]?.value || 0);
+      const duration = Number(vals[2]?.value || 0);
+      const conversions = Number(vals[3]?.value || 0);
+      const mins = Math.floor(duration / 60); const secs = Math.round(duration % 60);
+      return { url: page, sessions, bounce: `${Math.round(bounce*100)}%`, duration: `${mins}:${String(secs).padStart(2,'0')}`, conversions };
+    }).sort((a,b) => b.sessions - a.sessions).slice(0, 20);
+  }
+
+  function transformGA4Engagement(ga4) {
+    if (!ga4?.rows) return { ignited: [], extinguished: [] };
+    const pages = transformGA4Pages(ga4);
+    const ignited = pages.filter(p => parseInt(p.bounce) < 50 && p.sessions > 10)
+      .slice(0, 5).map(p => ({ url: p.url, reason: `Low bounce (${p.bounce}), ${p.sessions} sessions, ${p.conversions} conv.` }));
+    const extinguished = pages.filter(p => parseInt(p.bounce) >= 55 && p.sessions > 10)
+      .slice(0, 5).map(p => ({ url: p.url, reason: `High bounce (${p.bounce}) with ${p.sessions} sessions` }));
+    return { ignited, extinguished };
+  }
+
+  // GSC -> dashboard shapes
+  function transformGSCSummary(gsc) {
+    if (!gsc?.rows) return [];
+    const rows = gsc.rows;
+    let totalClicks = 0, totalImpressions = 0;
+    rows.forEach(r => { totalClicks += r.clicks || 0; totalImpressions += r.impressions || 0; });
+    const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions * 100) : 0;
+    const avgPos = rows.length > 0 ? rows.reduce((s,r) => s + (r.position || 0), 0) / rows.length : 0;
+    return [
+      { name: "Total Clicks", value: totalClicks.toLocaleString(), sub: "" },
+      { name: "Impressions", value: totalImpressions.toLocaleString(), sub: "" },
+      { name: "Avg. CTR", value: `${avgCtr.toFixed(1)}%`, sub: "" },
+      { name: "Avg. Position", value: avgPos.toFixed(1), sub: "" }
+    ];
+  }
+
+  function transformGSCPages(gsc) {
+    if (!gsc?.rows) return [];
+    return gsc.rows.sort((a,b) => (b.clicks||0) - (a.clicks||0)).slice(0, 20).map(r => ({
+      url: r.keys?.[0] || '?', clicks: r.clicks || 0, impressions: r.impressions || 0,
+      ctr: `${((r.ctr || 0) * 100).toFixed(1)}%`, position: (r.position || 0).toFixed(1)
+    }));
+  }
+
+  function transformGSCAlmost(gsc) {
+    if (!gsc?.rows) return [];
+    return gsc.rows.filter(r => r.position >= 11 && r.position <= 20)
+      .sort((a,b) => a.position - b.position).slice(0, 10).map(r => ({
+        url: r.keys?.[0] || '?', impressions: r.impressions || 0, position: (r.position || 0).toFixed(1)
+      }));
+  }
+
+  function transformGSCLowCTR(gsc) {
+    if (!gsc?.rows) return [];
+    return gsc.rows.filter(r => (r.impressions || 0) >= 500 && (r.ctr || 0) < 0.02)
+      .sort((a,b) => (b.impressions||0) - (a.impressions||0)).slice(0, 10).map(r => ({
+        url: r.keys?.[0] || '?', impressions: r.impressions || 0, ctr: `${((r.ctr||0)*100).toFixed(1)}%`
+      }));
+  }
+
+  // Prospect Score — calculated from Public Pulse data
+  const HIGH_TICKET_CATEGORIES = [
+    'plumber','roofing','hvac','contractor','electrician','lawyer','attorney',
+    'cpa','accountant','financial advisor','doctor','physician','dentist','orthodontist',
+    'surgeon','engineer','surveyor','architect','insurance','real estate'
+  ];
+
+  function calculateProspectScore(pulse) {
+    if (!pulse) return null;
+    let score = 0;
+    const signals = [];
+
+    // Signal 1: 30+ recent reviews (2 pts)
+    const recentReviews = pulse.gbp?.recentReviewCount || 0;
+    if (recentReviews >= 30) {
+      score += 2;
+      signals.push({ label: '30+ recent reviews', pts: 2, pass: true });
+    } else {
+      signals.push({ label: '30+ recent reviews', pts: 2, pass: false, actual: `${recentReviews} found` });
+    }
+
+    // Signal 2: Running paid ads (2 pts)
+    const hasAds = pulse.ads?.metaAdsFound || pulse.ads?.googleAdsFound || false;
+    if (hasAds) {
+      score += 2;
+      signals.push({ label: 'Running paid ads', pts: 2, pass: true });
+    } else {
+      signals.push({ label: 'Running paid ads', pts: 2, pass: false, actual: 'No ads detected' });
+    }
+
+    // Signal 3: Spanish social but weak Spanish site (2 pts)
+    const hasSpanishSocial = pulse.social?.hasSpanishPage || false;
+    const weakSpanishSite = pulse.spanishGap || false;
+    if (hasSpanishSocial && weakSpanishSite) {
+      score += 2;
+      signals.push({ label: 'Spanish social, weak Spanish site', pts: 2, pass: true });
+    } else {
+      signals.push({ label: 'Spanish social, weak Spanish site', pts: 2, pass: false, actual: !hasSpanishSocial ? 'No Spanish social found' : 'Spanish site looks OK' });
+    }
+
+    // Signal 4: In business 3+ years (1 pt)
+    const yearsOpen = pulse.gbp?.yearsInBusiness || 0;
+    if (yearsOpen >= 3) {
+      score += 1;
+      signals.push({ label: `In business ${yearsOpen}+ years`, pts: 1, pass: true });
+    } else {
+      signals.push({ label: 'In business 3+ years', pts: 1, pass: false, actual: yearsOpen ? `${yearsOpen} yr` : 'Unknown' });
+    }
+
+    // Signal 5: Competitor has better site (1 pt)
+    const competitorBetter = pulse.competitor?.theyWin || false;
+    if (competitorBetter) {
+      score += 1;
+      signals.push({ label: 'Competitor has better site', pts: 1, pass: true });
+    } else {
+      signals.push({ label: 'Competitor has better site', pts: 1, pass: false, actual: 'No stronger competitor found' });
+    }
+
+    // Signal 6: High-ticket service category (2 pts)
+    const category = (pulse.gbp?.category || '').toLowerCase();
+    const isHighTicket = HIGH_TICKET_CATEGORIES.some(c => category.includes(c));
+    if (isHighTicket) {
+      score += 2;
+      signals.push({ label: `High-ticket category (${pulse.gbp?.category})`, pts: 2, pass: true });
+    } else {
+      signals.push({ label: 'High-ticket service category', pts: 2, pass: false, actual: pulse.gbp?.category || 'Unknown' });
+    }
+
+    return { score, signals, max: 10 };
+  }
+
+  function resetProspectScore() {
+    const badge = document.getElementById('prospect-score-badge');
+    if (!badge) return;
+    badge.innerHTML = '';
+    badge.style.display = 'none';
+    STATE.prospectScore = null;
+  }
+
+  function renderProspectScore(pulse) {
+    const result = calculateProspectScore(pulse);
+    if (!result) return;
+    const { score, max } = result;
+    const tier = score >= 7 ? 'green' : score >= 4 ? 'yellow' : 'red';
+    const label = score >= 7 ? 'Run full audit' : score >= 4 ? 'Worth a look' : 'Skip';
+    const badge = document.getElementById('prospect-score-badge');
+    if (!badge) return;
+    badge.innerHTML = `<div class="score-badge ${tier}"><span class="score-num">${score}</span><span>/ ${max} — ${label}</span></div>`;
+    badge.style.display = 'block';
+    STATE.prospectScore = result;
+  }
+
+  // Bilingual -> dashboard shapes
+  function transformBilingualCoverage(bi) {
+    if (!bi?.coverage) return { totalPages: 0, englishPages: 0, spanishPages: 0, coveragePct: 0 };
+    return { totalPages: bi.coverage.totalPages, englishPages: bi.coverage.englishPages,
+             spanishPages: bi.coverage.spanishPages, coveragePct: bi.coverage.coveragePercent };
+  }
+
+  function transformBilingualGaps(bi) {
+    if (!bi?.gaps) return [];
+    return bi.gaps.filter(g => g.status === 'missing').slice(0, 20).map(g => ({
+      englishUrl: g.englishUrl, spanishUrl: g.expectedSpanishUrl, status: g.status
+    }));
+  }
+
+  // Recommendations -> category buckets
+  function bucketRecommendations(recs) {
+    if (!Array.isArray(recs)) return { quickwins:[], technical:[], content:[], engagement:[], bilingual:[] };
+    const impMap = { high:'High', medium:'Medium', low:'Low' };
+    const toRender = r => ({
+      priority: r.impact === 'high' ? 'high' : r.impact === 'medium' ? 'med' : 'low',
+      action: r.action, source: r.source, impact: impMap[r.impact] || r.impact,
+      effort: impMap[r.effort] || r.effort, notes: r.notes || '', id: r.id, included: r.included
+    });
+    const quickwins = recs.filter(r => r.impact === 'high' && r.effort === 'low').map(toRender);
+    const technical = recs.filter(r => r.source === 'lighthouse').map(toRender);
+    const content = recs.filter(r => ['crawler','gsc'].includes(r.source) && !(r.impact === 'high' && r.effort === 'low')).map(toRender);
+    const engagement = recs.filter(r => r.source === 'ga4').map(toRender);
+    const bilingual = recs.filter(r => r.source === 'bilingual' || r.category === 'bilingual').map(toRender);
+    return { quickwins, technical, content, engagement, bilingual };
+  }
+
+  // Narrative -> section map
+  const NARRATIVE_ID_MAP = {
+    'executive-summary': 'summary', 'technical-health': 'technical', 'content-seo': 'content',
+    'traffic-engagement': 'traffic', 'bilingual-presence': 'bilingual', 'the-opportunity': 'opportunity'
+  };
+  function narrativeSectionMap(sections) {
+    const map = {};
+    if (!Array.isArray(sections)) return map;
+    sections.forEach(s => { map[NARRATIVE_ID_MAP[s.id] || s.id] = s; });
+    return map;
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     STATIC SECTION DEFINITIONS
+     ═══════════════════════════════════════════════════════ */
+  const LIGHTHOUSE_SECTIONS = [
+    { id: "scores", name: "Overall Scores", desc: "Performance, SEO, Accessibility, Best Practices" },
+    { id: "vitals", name: "Core Web Vitals", desc: "LCP, INP, CLS, FCP, TBT, Speed Index" },
+    { id: "opportunities", name: "Optimization Opportunities", desc: "Estimated savings & priorities" },
+    { id: "findings", name: "SEO & Best Practices", desc: "Flagged issues" },
+    { id: "stack", name: "Detected Tech Stack", desc: "Frameworks, CMS, analytics, CDN" }
+  ];
+  const CRAWLER_SECTIONS = [
+    { id: "pages", name: "Page Content Inventory", desc: "All crawled pages" },
+    { id: "broken", name: "Broken Links", desc: "4xx errors found during crawl" },
+    { id: "images", name: "Image Inventory", desc: "Images, alt text, lazy-load status" },
+    { id: "schema", name: "Schema & AEO", desc: "Schema coverage & AEO readiness" },
+    { id: "readability", name: "Readability", desc: "Flesch scores & voice readiness" },
+    { id: "screenshots", name: "Screenshots", desc: "Captured page renders" }
+  ];
+  const BROAD_TRAFFIC_SECTIONS = [
+    { id: "overview", name: "Traffic Overview", desc: "Estimated monthly visits, sources, bounce rate" },
+    { id: "gbp", name: "Google Business Profile", desc: "Reviews, rating, photos, posts, Q&A activity" },
+    { id: "ads", name: "Ad Spend Detection", desc: "Meta Ad Library + Google Ads Transparency — are they burning money on a broken site?" },
+    { id: "social", name: "Social Footprint", desc: "Instagram & Facebook — followers, post frequency, last post date" },
+    { id: "index", name: "Index Status", desc: "How many pages Google has indexed — gaps signal technical problems" },
+    { id: "competitor", name: "Competitor Comparison", desc: "Side-by-side vs. top-ranking competitor for their main keyword" }
+  ];
+  const DEEP_TRAFFIC_SECTIONS = [
+    { id: "ga4-summary", name: "GA4 — 30-Day Summary", desc: "Sessions, engagement rate, conversions" },
+    { id: "ga4-pages", name: "GA4 — Per-Page Performance", desc: "Traffic, bounce, duration by page" },
+    { id: "ga4-devices", name: "GA4 — Device & Language Breakdown", desc: "Mobile vs desktop split + Spanish-speaking visitor data" },
+    { id: "ga4-flow", name: "GA4 — Landing & Exit Pages", desc: "Where people arrive and where they leave — often the most revealing data" },
+    { id: "gsc-summary", name: "GSC — Search Performance", desc: "Clicks, impressions, CTR, average position" },
+    { id: "gsc-almost", name: "GSC — Almost-Ranking Pages", desc: "Positions 11–20 — one push away from page 1" },
+    { id: "gsc-lowctr", name: "GSC — High Impression / Low CTR", desc: "Pages Google shows but nobody clicks — title & meta opportunity" },
+    { id: "gsc-coverage", name: "GSC — Index Coverage Errors", desc: "Pages Google tried to crawl and failed — invisible technical problems" }
+  ];
+  const BILINGUAL_SECTIONS = [
+    { id: "coverage", name: "Language Coverage Summary", desc: "EN vs ES page count & coverage %" },
+    { id: "gaps", name: "Translation Gap Report", desc: "English pages missing Spanish equivalents" },
+    { id: "hreflang", name: "hreflang Audit", desc: "Pages with hreflang issues" }
+  ];
+  const RECOMMENDATIONS_SECTIONS = [
+    { id: "quickwins", name: "Quick Wins", desc: "High impact, low effort" },
+    { id: "technical", name: "Technical Fixes", desc: "Lighthouse-sourced" },
+    { id: "content", name: "Content Opportunities", desc: "Crawler + GSC-sourced" },
+    { id: "engagement", name: "Engagement Fixes", desc: "GA4-sourced" },
+    { id: "bilingual", name: "Bilingual Gaps", desc: "Bilingual Audit-sourced" }
+  ];
+  const NARRATIVE_SECTIONS = [
+    { id: "summary", name: "Executive Summary", desc: "High-level synthesis — all tools" },
+    { id: "technical", name: "Technical Health", desc: "Lighthouse-sourced" },
+    { id: "content", name: "Content & SEO", desc: "Crawler + GSC-sourced" },
+    { id: "traffic", name: "Traffic & Engagement", desc: "GA4-sourced" },
+    { id: "bilingual", name: "Bilingual Presence", desc: "Bilingual Audit — EN/ES editable" },
+    { id: "opportunity", name: "The Opportunity", desc: "Sales narrative — EN/ES editable" }
+  ];
+
+  /* ═══════════════════════════════════════════════════════
+     WORKSPACE LOADING & RUNNING TOOLS
+     ═══════════════════════════════════════════════════════ */
+  async function handleLoadWorkspace() {
+    const input = document.getElementById('prospect-url');
+    const url = input.value.trim();
+    if (!url) return showToast('Enter a prospect URL', true);
+    const hostname = hostnameFromUrl(url);
+    STATE.hostname = hostname;
+    resetProspectScore();
+    document.getElementById('btn-load-workspace').textContent = 'Loading…';
+    try {
+      STATE.workspace = await api('GET', `/api/workspace/${hostname}`);
+      updateProspectHeader();
+      renderAll();
+      showToast(`Workspace loaded: ${hostname}`);
+    } catch (e) {
+      STATE.workspace = { hostname, notes: '', captures: {} };
+      updateProspectHeader();
+      renderAll();
+      showToast(`New workspace: ${hostname} (no prior data)`);
+    }
+    document.getElementById('btn-load-workspace').textContent = 'Load';
+  }
+
+  function updateProspectHeader() {
+    const h = STATE.hostname;
+    if (!h) return;
+    document.getElementById('prospect-hostname').textContent = h;
+    document.getElementById('prospect-hostname').style.display = '';
+    const notes = STATE.workspace?.notes || '';
+    if (notes) {
+      document.getElementById('prospect-notes-text').textContent = notes;
+      document.getElementById('prospect-notes-display').style.display = '';
+    } else {
+      document.getElementById('prospect-notes-display').style.display = 'none';
+    }
+    document.getElementById('prospect-category-input').value = STATE.workspace?.category || '';
+    const slot = STATE.workspace?.captures;
+    const lastTs = Object.values(slot || {}).map(s => s?.latest?.timestamp).filter(Boolean).sort().reverse()[0];
+    document.getElementById('prospect-meta').textContent = lastTs
+      ? `Workspace loaded · Last activity: ${lastTs.replace(/T/, ' ').replace(/-/g, ':').slice(0,16)}`
+      : 'Workspace loaded · No captures yet';
+  }
+
+  function toggleNotesEdit() {
+    const edit = document.getElementById('prospect-notes-edit');
+    const isShowing = edit.style.display !== 'none';
+    if (!isShowing) document.getElementById('prospect-notes-input').value = STATE.workspace?.notes || '';
+    edit.style.display = isShowing ? 'none' : '';
+  }
+
+  async function saveNotes() {
+    if (!STATE.hostname) return;
+    const notes = document.getElementById('prospect-notes-input').value;
+    try {
+      await api('PUT', `/api/workspace/${STATE.hostname}/notes`, { notes });
+      STATE.workspace.notes = notes;
+      updateProspectHeader();
+      toggleNotesEdit();
+      showToast('Notes saved');
+    } catch (e) { showToast('Failed to save notes: ' + e.message, true); }
+  }
+
+  async function saveCategory() {
+    if (!STATE.hostname) return;
+    const category = document.getElementById('prospect-category-input').value.trim();
+    if (category === (STATE.workspace?.category || '')) return;
+    try {
+      await api('PUT', `/api/workspace/${STATE.hostname}/category`, { category });
+      if (STATE.workspace) STATE.workspace.category = category;
+      showToast('Industry saved');
+    } catch (e) { showToast('Failed to save industry: ' + e.message, true); }
+  }
+
+  async function showRecentWorkspaces() {
+    try {
+      const list = await api('GET', '/api/workspaces');
+      if (!list.length) return showToast('No workspaces yet');
+      const pick = prompt('Recent workspaces:\n\n' + list.map((w,i) => `${i+1}. ${w.hostname}`).join('\n') + '\n\nEnter number to load:');
+      if (pick && list[Number(pick)-1]) {
+        document.getElementById('prospect-url').value = list[Number(pick)-1].hostname;
+        handleLoadWorkspace();
+      }
+    } catch (e) { showToast('Error: ' + e.message, true); }
+  }
+
+  async function runTool(toolId, evt) {
+    if (evt) evt.stopPropagation();
+    if (!STATE.hostname) return showToast('Load a workspace first', true);
+    const def = TOOL_DEFS.find(t => t.id === toolId);
+    if (!def) return;
+    if (def.isEditor) { goto('edits-hub'); return; }
+    if (def.needsCredentials) {
+      const pid = prompt('Enter GA4 Property ID (e.g. 123456789):\n\nLeave blank to skip GA4.');
+      const siteUrl = prompt('Enter GSC Site URL (e.g. https://example.com/):\n\nLeave blank to skip GSC.');
+      if (!pid && !siteUrl) return showToast('No credentials entered — cancelled', true);
+      const btn = document.querySelector(`[data-run="${def.id}"]`);
+      if (btn) { btn.textContent = 'Running…'; btn.disabled = true; }
+      try {
+        if (pid) {
+          await api('POST', '/api/capture/ga4', { url: `https://${STATE.hostname}`, propertyId: pid });
+          showToast('GA4 captured');
+        }
+        if (siteUrl) {
+          await api('POST', '/api/capture/gsc', { url: `https://${STATE.hostname}`, siteUrl });
+          showToast('GSC captured');
+        }
+        STATE.workspace = await api('GET', `/api/workspace/${STATE.hostname}`);
+        renderAll();
+        updateProspectHeader();
+      } catch (e) {
+        showToast(`Open Books failed: ${e.message}`, true);
+      }
+      if (btn) { btn.textContent = 'Run'; btn.disabled = false; }
+      return;
+    }
+    const body = def.bodyKey === 'hostname' ? { hostname: STATE.hostname } : { url: `https://${STATE.hostname}` };
+    return runToolRequest(def, body);
+  }
+
+  async function runToolRequest(def, body) {
+    const btn = document.querySelector(`[data-run="${def.id}"]`);
+    if (btn) { btn.textContent = 'Running…'; btn.disabled = true; }
+    try {
+      await api('POST', def.captureEndpoint, body);
+      STATE.workspace = await api('GET', `/api/workspace/${STATE.hostname}`);
+      renderAll();
+      updateProspectHeader();
+      if (def.id === 'broad-traffic') renderProspectScore(captureData('broad-traffic'));
+      showToast(`${def.name} complete`);
+    } catch (e) {
+      showToast(`${def.name} failed: ${e.message}`, true);
+    }
+    if (btn) { btn.textContent = 'Run'; btn.disabled = false; }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     RENDER FUNCTIONS
+     ═══════════════════════════════════════════════════════ */
+  function renderToolCards() {
+    clearGrid("tool-cards");
+    const grid = document.getElementById("tool-cards");
+    TOOL_DEFS.forEach(t => {
+      const s = toolStatus(t.id === 'crawler' ? 'crawl' : t.id);
+      const card = document.createElement("div");
+      card.className = "tool-card";
+      const isEditor = t.isEditor;
+      const statusBadge = isEditor ? '<span class="status-pill done"><span class="dot"></span>ready</span>' : `<span class="status-pill ${s.status}"><span class="dot"></span>${s.status}</span>`;
+      const captureCount = isEditor ? Object.values(STATE.workspace?.captures || {}).filter(s => s?.latest).length : 0;
+      const statBlock = isEditor ? `<div class="stat"><span class="v">${captureCount} artifact${captureCount !== 1 ? 's' : ''}</span></div>` : `<div class="stat"><span class="v">${s.stat}</span></div>`;
+      const runButton = isEditor ? '' : `<button class="btn primary sm" data-run="${t.id}" onclick="runTool('${t.id}', event)" style="margin-right:8px">Run</button>`;
+      card.innerHTML = `
+        <div class="top">
+          <div><h3>${t.name}</h3><ul class="bullets">${t.bullets.map(b => `<li>${b}</li>`).join("")}</ul>${t.deps ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">${t.deps.map(([tool, label]) => { const done = toolStatus(tool).status === 'done'; return `<span style="font-size:11px;color:${done ? 'var(--good)' : 'var(--muted)'}">${done ? '●' : '○'} ${label}</span>`; }).join('')}</div>` : ''}</div>
+          ${statusBadge}
+        </div>
+        <div class="foot">
+          ${statBlock}
+          ${runButton}
+          <span class="arrow">→</span>
+        </div>
+      `;
+      card.addEventListener("click", (e) => { if (e.target.tagName !== 'BUTTON') goto(`${t.id === 'crawler' ? 'crawler' : t.id}-hub`); });
+      grid.appendChild(card);
+    });
+  }
+
+  function renderSectionCards(sections, parentId, prefix) {
+    clearGrid(parentId);
+    const grid = document.getElementById(parentId);
+    sections.forEach(s => {
+      const card = document.createElement("div");
+      card.className = "section-card";
+      card.innerHTML = `<h4>${s.name}</h4><p class="desc">${s.desc}</p><span class="arrow">→</span>`;
+      card.addEventListener("click", () => goto(`${prefix}-${s.id}`));
+      grid.appendChild(card);
+    });
+  }
+
+  function renderRecommendationSectionCards(buckets, parentId) {
+    clearGrid(parentId);
+    const grid = document.getElementById(parentId);
+    if (!grid) return;
+    const defs = [
+      { id: "quickwins", name: "⚡ Quick Wins", desc: "High impact, low effort", key: "quickwins", accent: true },
+      { id: "technical", name: "Technical Fixes", desc: "Lighthouse-sourced", key: "technical" },
+      { id: "content", name: "Content Opportunities", desc: "Crawler + GSC-sourced", key: "content" },
+      { id: "engagement", name: "Engagement Fixes", desc: "GA4-sourced", key: "engagement" },
+      { id: "bilingual", name: "Bilingual Gaps", desc: "Bilingual Audit-sourced", key: "bilingual" },
+    ];
+    defs.forEach(s => {
+      const count = buckets[s.key]?.length ?? 0;
+      const card = document.createElement("div");
+      card.className = "section-card";
+      if (s.accent) card.style.cssText = "border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent)";
+      card.innerHTML = `<h4>${s.name}</h4><p class="desc">${s.desc}</p><p style="font-size:12px;color:var(--muted);margin-top:6px">${count} item${count !== 1 ? 's' : ''}</p><span class="arrow">→</span>`;
+      card.addEventListener("click", () => goto(`recommendations-${s.id}`));
+      grid.appendChild(card);
+    });
+  }
+
+  function renderEmptyState(gridId, msg) {
+    clearGrid(gridId);
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.innerHTML = `<div class="data-card" style="text-align:center;color:var(--muted);padding:40px"><p>${msg}</p></div>`;
+  }
+
+  function renderLighthouseScores() {
+    clearGrid("lighthouse-scores-data");
+    const lhr = captureData('lighthouse');
+    if (!lhr) return renderEmptyState("lighthouse-scores-data", "Run Lighthouse to see scores.");
+    const grid = document.getElementById("lighthouse-scores-data");
+    transformLighthouseScores(lhr).forEach(s => {
+      const card = document.createElement("div");
+      card.className = `data-card score-card ${s.severity}`;
+      card.innerHTML = `<div class="gauge" style="--p:${s.score}" data-v="${s.score}"></div><div><div class="label">${s.category}</div><div class="name">${s.score} / 100</div><div class="desc">${s.desc}</div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderLighthouseVitals() {
+    clearGrid("lighthouse-vitals-data");
+    const lhr = captureData('lighthouse');
+    if (!lhr) return renderEmptyState("lighthouse-vitals-data", "Run Lighthouse to see vitals.");
+    const grid = document.getElementById("lighthouse-vitals-data");
+    transformLighthouseVitals(lhr).forEach(v => {
+      const card = document.createElement("div");
+      card.className = "data-card metric-card";
+      card.innerHTML = `<div><div class="name">${v.name}</div><div class="unit">${v.unit}</div></div><div><span class="value">${v.value}</span><span class="badge ${v.pass ? 'pass' : 'fail'}">${v.pass ? 'Pass' : 'Fail'}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderLighthouseOpportunities() {
+    clearGrid("lighthouse-opportunities-data");
+    const lhr = captureData('lighthouse');
+    if (!lhr) return renderEmptyState("lighthouse-opportunities-data", "Run Lighthouse to see opportunities.");
+    const grid = document.getElementById("lighthouse-opportunities-data");
+    transformLighthouseOpportunities(lhr).forEach(o => {
+      const card = document.createElement("div");
+      card.className = "data-card opportunity-card";
+      card.innerHTML = `<span class="priority ${o.priority}">${o.priority}</span><div><div class="name">${o.name}</div><div class="desc">${o.desc}</div></div><div class="saving">${o.saving}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderLighthouseFindings() {
+    clearGrid("lighthouse-findings-data");
+    const lhr = captureData('lighthouse');
+    if (!lhr) return renderEmptyState("lighthouse-findings-data", "Run Lighthouse to see findings.");
+    const grid = document.getElementById("lighthouse-findings-data");
+    transformLighthouseFindings(lhr).forEach(f => {
+      const card = document.createElement("div");
+      card.className = "data-card opportunity-card";
+      card.innerHTML = `<span class="priority ${f.priority}">${f.priority}</span><div><div class="name">${f.name}</div><div class="desc">${f.desc}</div></div><div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderLighthouseStack() {
+    clearGrid("lighthouse-stack-data");
+    const lhr = captureData('lighthouse');
+    if (!lhr) return renderEmptyState("lighthouse-stack-data", "Run Lighthouse to see tech stack.");
+    const grid = document.getElementById("lighthouse-stack-data");
+    transformLighthouseStack(lhr).forEach(tech => {
+      const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = tech; grid.appendChild(chip);
+    });
+    if (!grid.children.length) renderEmptyState("lighthouse-stack-data", "No stack packs detected.");
+  }
+
+  function renderCrawlerPages() {
+    clearGrid("crawler-pages-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-pages-data", "Run Site Crawler to see pages.");
+    const grid = document.getElementById("crawler-pages-data");
+    transformCrawlerPages(crawl).forEach(p => {
+      const card = document.createElement("div"); card.className = "data-card page-card";
+      const dupBadge = p.duplicateOf ? `<span title="Duplicate of: ${p.duplicateOf}" style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.15);color:var(--bad);font-size:10px;font-weight:700;cursor:help">Duplicate</span>` : '';
+      const thinBadge = p.isThinContent ? `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.15);color:var(--bad);font-size:10px;font-weight:700">Thin</span>` : '';
+
+      const row = (k, v) => `<div class="row"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+      const badge = (text, bad) => `<span style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;background:${bad ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'};color:${bad ? 'var(--bad)' : 'var(--good)'}">${text}</span>`;
+
+      const groupHeader = t => `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:14px 0 6px">${t}</div>`;
+
+      card.innerHTML = `
+        <div class="summary">
+          <div>
+            <div class="url">${p.url}${dupBadge}${thinBadge}</div>
+            <div class="title">${p.title}</div>
+          </div>
+          <span class="expand-icon">›</span>
+        </div>
+        <div class="details">
+          ${groupHeader('Content')}
+          ${row('Meta description', p.meta || `<span style="color:var(--bad)">Missing</span>`)}
+          ${row('H1', p.h1 || `<span style="color:var(--bad)">Missing</span>`)}
+          ${row('Headings', p.h2h3)}
+          ${row('Words', `${p.words}${p.isThinContent ? ' ' + badge('Thin content','1') : ''}`)}
+
+          ${groupHeader('SEO Signals')}
+          ${row('Title', p.titleIssue ? badge(p.titleIssue, p.titleIssue !== 'ok') : badge('ok', false))}
+          ${row('Canonical', p.canonicalUrl ? `${p.canonicalUrl}${p.canonicalMismatch ? ' ' + badge('Mismatch','1') : ''}` : '<span style="color:var(--muted)">None</span>')}
+          ${row('Robots meta', p.robotsMeta || '<span style="color:var(--muted)">None</span>')}
+          ${row('Noindexed', p.isNoindexed ? badge('Yes','1') : badge('No',false))}
+          ${row('Lang', p.htmlLang || '<span style="color:var(--muted)">Not set</span>')}
+          ${row('hreflang tags', p.hreflangCount || '<span style="color:var(--muted)">None</span>')}
+
+          ${groupHeader('Technical')}
+          ${row('Viewport meta', p.hasViewportMeta ? badge('Yes',false) : badge('Missing','1'))}
+          ${row('Console errors', p.consoleErrors > 0 ? badge(`${p.consoleErrors} error(s)`,'1') : badge('None',false))}
+          ${row('Page weight', p.pageWeightKB ? `${p.pageWeightKB} KB` : '<span style="color:var(--muted)">—</span>')}
+          ${row('Form fields', p.formFieldCount || '0')}
+          ${row('Missing alt text', p.missingAltCount > 0 ? badge(`${p.missingAltCount} image(s)`,'1') : badge('None',false))}
+
+          ${groupHeader('Social')}
+          ${row('OG title', p.ogTitle || `<span style="color:var(--bad)">Missing</span>`)}
+          ${row('OG image', p.ogImage || `<span style="color:var(--bad)">Missing</span>`)}
+          ${row('Twitter card', p.twitterCard || `<span style="color:var(--muted)">None</span>`)}
+        </div>
+      `;
+      card.addEventListener("click", () => card.classList.toggle("expanded"));
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCrawlerTechnicalSignals() {
+    const el = document.getElementById("crawler-technical-signals");
+    if (!el) return;
+    el.innerHTML = "";
+    const crawl = captureData('crawl');
+    if (!crawl) return;
+
+    const signals = [
+      {
+        label: "HTTPS Redirect",
+        value: crawl.httpsRedirect?.enforced ? "Enforced" : "Not enforced",
+        pass: !!crawl.httpsRedirect?.enforced,
+      },
+      {
+        label: "robots.txt",
+        value: crawl.robotsTxt?.exists
+          ? `Found · ${crawl.robotsTxt.blockedPaths?.length || 0} disallow rule(s)`
+          : "Not found",
+        pass: !!crawl.robotsTxt?.exists,
+      },
+      {
+        label: "Sitemap",
+        value: crawl.sitemap?.found
+          ? `Found · ${crawl.sitemap.urlCount || 0} URLs · ${crawl.sitemap.orphanedUrls?.length || 0} orphaned`
+          : "Not found",
+        pass: !!crawl.sitemap?.found,
+      },
+      {
+        label: "Social Links",
+        value: crawl.detectedSocialLinks?.length
+          ? crawl.detectedSocialLinks.map(s => s.platform).join(', ')
+          : "None detected",
+        pass: (crawl.detectedSocialLinks?.length || 0) > 0,
+      },
+    ];
+
+    const card = document.createElement("div");
+    card.className = "data-card";
+    card.style.display = "grid";
+    card.style.gridTemplateColumns = "repeat(auto-fit, minmax(180px, 1fr))";
+    card.style.gap = "20px";
+    card.innerHTML = signals.map(s => `
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${s.label}</div>
+        <div style="font-size:13px;color:${s.pass ? 'var(--good)' : 'var(--bad)'};font-weight:600">${s.value}</div>
+      </div>
+    `).join('');
+    el.appendChild(card);
+  }
+
+  function renderCrawlerBroken() {
+    clearGrid("crawler-broken-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-broken-data", "Run Site Crawler first.");
+    const data = transformCrawlerBroken(crawl);
+    if (!data.length) return renderEmptyState("crawler-broken-data", "No broken links found.");
+    const grid = document.getElementById("crawler-broken-data");
+    data.forEach(b => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--bad)">${b.url}</div><div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:rgba(239,68,68,0.15);color:var(--bad);font-size:12px;font-weight:700">${b.status}</span></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Found on</div><div style="font-size:13px;color:var(--ink)">${b.foundOn}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Anchor</div><div style="font-size:13px;color:var(--ink)">${b.anchor}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCrawlerImages() {
+    clearGrid("crawler-images-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-images-data", "Run Site Crawler first.");
+    const grid = document.getElementById("crawler-images-data");
+    transformCrawlerImages(crawl).forEach(img => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center"><div><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${img.src}</div><div style="font-size:11px; color:var(--muted); margin-top:4px">Found on ${img.page}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Alt text</div><div style="font-size:13px;color:${img.missingAlt ? 'var(--bad)' : 'var(--ink)'}">${img.alt || 'Missing'}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Size</div><div style="font-size:13px;color:var(--ink)">${img.dimensions}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Lazy</div><div style="font-size:13px;color:var(--ink)">${img.lazyLoad ? 'Yes' : 'No'}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCrawlerSchema() {
+    clearGrid("crawler-schema-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-schema-data", "Run Site Crawler first.");
+    const grid = document.getElementById("crawler-schema-data");
+    transformCrawlerSchema(crawl).forEach(s => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:120px 1fr 1fr auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${s.url}</div><div><div style="font-size:11px;color:var(--muted)">Found</div><div style="font-size:13px">${s.types.join(', ') || 'None'}</div></div><div><div style="font-size:11px;color:var(--muted)">Missing</div><div style="font-size:13px;color:${s.missing.length ? 'var(--warn)' : 'var(--good)'}">${s.missing.length ? s.missing.join(', ') : 'None'}</div></div><div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:${s.aeoReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${s.aeoReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase">${s.aeoReady ? 'AEO Ready' : 'Not Ready'}</span></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCrawlerReadability() {
+    clearGrid("crawler-readability-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-readability-data", "Run Site Crawler first.");
+    const grid = document.getElementById("crawler-readability-data");
+    transformCrawlerReadability(crawl).forEach(r => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${r.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Flesch</div><div style="font-weight:700;color:var(--ink)">${r.flesch}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Grade</div><div style="font-weight:700;color:var(--ink)">${r.grade}</div></div><div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:${r.voiceReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${r.voiceReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase">${r.voiceReady ? 'Voice Ready' : 'Not Ready'}</span></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderCrawlerScreenshots() {
+    clearGrid("crawler-screenshots-data");
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-screenshots-data", "Run Site Crawler first.");
+    const grid = document.getElementById("crawler-screenshots-data");
+    transformCrawlerScreenshots(crawl).forEach(s => {
+      const card = document.createElement("div"); card.className = "data-card"; card.style.padding = "0"; card.style.overflow = "hidden";
+      card.innerHTML = `<img src="${s.thumb}" alt="Screenshot of ${s.url}" style="width:100%;display:block"><div style="padding:10px 14px"><div style="font-family:var(--mono);font-size:12px;color:var(--accent)">${s.url}</div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     PUBLIC PULSE (broad-traffic) — real data
+     ═══════════════════════════════════════════════════════ */
+  function renderBroadTrafficOverview() {
+    clearGrid("broad-traffic-overview-data");
+    const grid = document.getElementById("broad-traffic-overview-data");
+    if (!grid) return;
+    const bt = captureData('broad-traffic');
+    if (!bt) return renderEmptyState("broad-traffic-overview-data", "Run Public Pulse to capture data.");
+    const metricCard = (name, value, sub) => {
+      const c = document.createElement("div"); c.className = "data-card metric-card";
+      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value">${value}</span></div>`;
+      grid.appendChild(c);
+    };
+    if (bt.domainAge) {
+      metricCard("Domain age", `${bt.domainAge.ageYears} yr${bt.domainAge.ageYears !== 1 ? 's' : ''}`, bt.domainAge.registrationDate?.slice(0, 10) || '');
+    }
+    const note = document.createElement("div"); note.className = "data-card";
+    note.innerHTML = `<div style="color:var(--muted);font-size:13px">Traffic volume estimates (visits, bounce rate, sources) require CRuX API or SimilarWeb integration — not yet available. Run GA4 Open Books for authenticated traffic data.</div>`;
+    grid.appendChild(note);
+  }
+
+  function renderBroadTrafficGBP() {
+    clearGrid("broad-traffic-gbp-data");
+    const grid = document.getElementById("broad-traffic-gbp-data");
+    if (!grid) return;
+    const bt = captureData('broad-traffic');
+    const metricCard = (name, value, sub) => {
+      const c = document.createElement("div"); c.className = "data-card metric-card";
+      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value">${value}</span></div>`;
+      grid.appendChild(c);
+    };
+    if (bt?.domainAge) {
+      metricCard("Domain age", `${bt.domainAge.ageYears} yr${bt.domainAge.ageYears !== 1 ? 's' : ''}`, `Registered ${bt.domainAge.registrationDate?.slice(0, 10) || ''}`);
+    }
+    const hostname = STATE.hostname || '';
+    const note = document.createElement("div"); note.className = "data-card";
+    note.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:12px">Google Business Profile</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">GBP data (rating, reviews, category) requires Google Places API integration — not yet captured automatically.</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="https://www.google.com/maps/search/${encodeURIComponent(hostname)}" target="_blank" style="color:var(--accent);font-size:13px">→ Search Google Maps for this business</a>
+        <a href="https://business.google.com/reviews" target="_blank" style="color:var(--accent);font-size:13px">→ Google Business Profile dashboard</a>
+      </div>`;
+    grid.appendChild(note);
+  }
+
+  function renderBroadTrafficAds() {
+    clearGrid("broad-traffic-ads-data");
+    const grid = document.getElementById("broad-traffic-ads-data");
+    if (!grid) return;
+    const hostname = STATE.hostname || '';
+    const links = [
+      { label: "Meta Ad Library", desc: "Search for active Facebook and Instagram ads by this business", url: `https://www.facebook.com/ads/library/?search_type=keyword_unordered&q=${encodeURIComponent(hostname)}` },
+      { label: "Google Ads Transparency", desc: "Search for active Google Ads by this advertiser", url: `https://adstransparency.google.com/?region=anywhere&query=${encodeURIComponent(hostname)}` },
+    ];
+    links.forEach(l => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center"><div><div style="font-weight:600;color:var(--ink);font-size:15px;margin-bottom:4px">${l.label}</div><div style="font-size:13px;color:var(--muted)">${l.desc}</div></div><a href="${l.url}" target="_blank" class="btn ghost sm">Check →</a></div>`;
+      grid.appendChild(card);
+    });
+    const note = document.createElement("div"); note.className = "data-card";
+    note.innerHTML = `<div style="color:var(--muted);font-size:12px">Automated ad spend detection requires Meta Ads API advertiser-level auth or scraping — not available for prospects. Use the manual check links above.</div>`;
+    grid.appendChild(note);
+  }
+
+  function renderBroadTrafficSocial() {
+    clearGrid("broad-traffic-social-data");
+    const grid = document.getElementById("broad-traffic-social-data");
+    if (!grid) return;
+    const crawl = captureData('crawl');
+    const socialLinks = crawl?.detectedSocialLinks || [];
+    if (socialLinks.length) {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px">Detected social profiles (from crawl)</div>` +
+        socialLinks.map(s => `<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)"><div style="color:var(--muted);font-size:13px">${s.platform}</div><a href="${s.url}" target="_blank" style="font-family:var(--mono);font-size:12px;color:var(--accent)">${s.url}</a></div>`).join('');
+      grid.appendChild(card);
+    } else {
+      renderEmptyState("broad-traffic-social-data", crawl ? "No social profile links detected on the crawled pages." : "Run Site Crawler first to detect social links.");
+    }
+  }
+
+  function renderBroadTrafficIndex() {
+    clearGrid("broad-traffic-index-data");
+    const grid = document.getElementById("broad-traffic-index-data");
+    if (!grid) return;
+    const crawl = captureData('crawl');
+    const bt = captureData('broad-traffic');
+    if (!crawl && !bt) return renderEmptyState("broad-traffic-index-data", "Run Site Crawler and Public Pulse to see index signals.");
+    const metricCard = (name, value, sub, bad) => {
+      const c = document.createElement("div"); c.className = "data-card metric-card";
+      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value" style="${bad ? 'color:var(--bad)' : ''}">${value}</span></div>`;
+      grid.appendChild(c);
+    };
+    if (crawl?.httpsRedirect) {
+      metricCard("HTTPS redirect", crawl.httpsRedirect.enforced ? "✓ Enforced" : "× Not enforced", crawl.httpsRedirect.finalUrl || '', !crawl.httpsRedirect.enforced);
+    }
+    if (crawl?.robotsTxt) {
+      metricCard("robots.txt", crawl.robotsTxt.exists ? "✓ Found" : "× Missing", crawl.robotsTxt.exists ? `${crawl.robotsTxt.blockedPaths?.length || 0} disallow rule(s)` : '', !crawl.robotsTxt.exists);
+    }
+    if (crawl?.sitemap) {
+      metricCard("Sitemap", crawl.sitemap.found ? "✓ Found" : "× Missing", crawl.sitemap.found ? `${crawl.sitemap.urlCount} URLs · ${crawl.sitemap.orphanedUrls?.length || 0} orphaned` : '', !crawl.sitemap.found);
+    }
+    if (crawl?.totalPages) {
+      metricCard("Pages crawled", crawl.totalPages.length, "internal links + sitemap", false);
+    }
+    if (bt?.domainAge) {
+      metricCard("Domain age", `${bt.domainAge.ageYears} yrs`, `Registered ${bt.domainAge.registrationDate?.slice(0, 10) || ''}`, false);
+    }
+  }
+
+  function renderBroadTrafficCompetitor() {
+    clearGrid("broad-traffic-competitor-data");
+    const grid = document.getElementById("broad-traffic-competitor-data");
+    if (!grid) return;
+    const items = [
+      { metric: "Domain", us: "taliscpas.com", them: "northhudsoncpa.com", winner: null },
+      { metric: "Est. monthly visits", us: "1,240", them: "3,800", winner: "them" },
+      { metric: "Lighthouse score", us: "43", them: "81", winner: "them" },
+      { metric: "Spanish page", us: "× No", them: "✓ Yes", winner: "them" },
+      { metric: "Reviews", us: "187", them: "94", winner: "us" },
+      { metric: "Ads running", us: "× No", them: "✓ Yes (Google)", winner: "them" }
+    ];
+    const header = document.createElement("div"); header.className = "data-card";
+    header.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600"><div>Metric</div><div style="text-align:right">You</div><div style="text-align:right">Top competitor</div></div>`;
+    grid.appendChild(header);
+    items.forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card";
+      const usColor = m.winner === 'us' ? 'var(--good)' : m.winner === 'them' ? 'var(--ink-2)' : 'var(--ink-2)';
+      const themColor = m.winner === 'them' ? 'var(--good)' : 'var(--ink-2)';
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center"><div style="color:var(--ink-2)">${m.metric}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${usColor}">${m.us}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${themColor}">${m.them}</div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     OPEN BOOKS (deep-traffic) — real data
+     ═══════════════════════════════════════════════════════ */
+  function renderDeepTrafficGA4Summary() {
+    clearGrid("deep-traffic-ga4-summary-data");
+    const grid = document.getElementById("deep-traffic-ga4-summary-data");
+    if (!grid) return;
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("deep-traffic-ga4-summary-data", "Run Open Books to capture GA4 data.");
+    transformGA4Summary(ga4).forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card metric-card";
+      card.innerHTML = `<div><div class="name">${m.name}</div><div class="unit">${m.sub}</div></div><div><span class="value">${m.value}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDeepTrafficGA4Pages() {
+    clearGrid("deep-traffic-ga4-pages-data");
+    const grid = document.getElementById("deep-traffic-ga4-pages-data");
+    if (!grid) return;
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("deep-traffic-ga4-pages-data", "Run Open Books to capture GA4 data.");
+    const items = transformGA4Pages(ga4);
+    items.forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1.5fr repeat(4,auto);gap:16px;align-items:center"><div style="font-family:var(--mono);font-size:13px;color:var(--accent)">${m.url}</div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Sessions</div><div style="font-weight:700">${m.sessions}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Bounce</div><div style="font-weight:700">${m.bounce}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Duration</div><div style="font-weight:700">${m.duration}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Conv.</div><div style="font-weight:700">${m.convs}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDeepTrafficGA4Devices() {
+    clearGrid("deep-traffic-ga4-devices-data");
+    const grid = document.getElementById("deep-traffic-ga4-devices-data");
+    if (!grid) return;
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("deep-traffic-ga4-devices-data", "Run Open Books to capture GA4 data.");
+
+    const sectionRow = (k, v, sub) => `<div style="display:grid;grid-template-columns:1fr auto;gap:16px;padding:8px 0;border-bottom:1px dashed var(--line)"><div><div style="color:var(--ink)">${k}</div><div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${sub}</div></div><div style="font-weight:700;color:var(--ink)">${v}</div></div>`;
+    const sectionCard = (title, rows) => { const c = document.createElement("div"); c.className = "data-card"; c.innerHTML = `<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:0 0 12px 0">${title}</h3>${rows}`; grid.appendChild(c); };
+
+    // Devices
+    if (ga4.devices?.rows?.length) {
+      const total = ga4.devices.rows.reduce((s, r) => s + Number(r.metricValues?.[0]?.value || 0), 0);
+      const rows = ga4.devices.rows.map(r => {
+        const sessions = Number(r.metricValues?.[0]?.value || 0);
+        const bounce = Number(r.metricValues?.[1]?.value || 0);
+        const pct = total > 0 ? Math.round(sessions / total * 100) : 0;
+        return sectionRow(r.dimensionValues?.[0]?.value || '?', `${pct}%`, `${sessions.toLocaleString()} sessions · bounce ${Math.round(bounce * 100)}%`);
+      }).join('');
+      sectionCard('Device', rows);
+    }
+
+    // Language groups
+    if (ga4.languageGroups?.rows?.length) {
+      const total = ga4.languageGroups.rows.reduce((s, r) => s + Number(r.metricValues?.[0]?.value || 0), 0);
+      const rows = ga4.languageGroups.rows.slice(0, 5).map(r => {
+        const lang = r.dimensionValues?.[0]?.value || '?';
+        const sessions = Number(r.metricValues?.[0]?.value || 0);
+        const pct = total > 0 ? Math.round(sessions / total * 100) : 0;
+        return sectionRow(lang, `${pct}%`, `${sessions.toLocaleString()} sessions`);
+      }).join('');
+      sectionCard('Language', rows);
+    }
+
+    // New vs returning
+    if (ga4.newVsReturning?.rows?.length) {
+      const total = ga4.newVsReturning.rows.reduce((s, r) => s + Number(r.metricValues?.[0]?.value || 0), 0);
+      const rows = ga4.newVsReturning.rows.map(r => {
+        const label = r.dimensionValues?.[0]?.value || '?';
+        const sessions = Number(r.metricValues?.[0]?.value || 0);
+        const pct = total > 0 ? Math.round(sessions / total * 100) : 0;
+        return sectionRow(label, `${pct}%`, `${sessions.toLocaleString()} sessions`);
+      }).join('');
+      sectionCard('New vs Returning', rows);
+    }
+  }
+
+  function renderDeepTrafficGA4Flow() {
+    clearGrid("deep-traffic-ga4-flow-data");
+    const grid = document.getElementById("deep-traffic-ga4-flow-data");
+    if (!grid) return;
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("deep-traffic-ga4-flow-data", "Run Open Books to capture GA4 data.");
+
+    // Channel groups
+    if (ga4.channelGroups?.rows?.length) {
+      const total = ga4.channelGroups.rows.reduce((s, r) => s + Number(r.metricValues?.[0]?.value || 0), 0);
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:0 0 12px 0">Channel Groups</h3>` +
+        ga4.channelGroups.rows.map(r => {
+          const channel = r.dimensionValues?.[0]?.value || '?';
+          const sessions = Number(r.metricValues?.[0]?.value || 0);
+          const pct = total > 0 ? Math.round(sessions / total * 100) : 0;
+          return `<div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;padding:8px 0;border-bottom:1px dashed var(--line)"><div style="color:var(--ink)">${channel}</div><div style="text-align:right;font-size:12px;color:var(--muted)">${sessions.toLocaleString()} sessions</div><div style="font-weight:700;color:var(--ink);text-align:right">${pct}%</div></div>`;
+        }).join('');
+      grid.appendChild(card);
+    } else {
+      renderEmptyState("deep-traffic-ga4-flow-data", "No channel group data available.");
+    }
+  }
+
+  function renderDeepTrafficGSCSummary() {
+    clearGrid("deep-traffic-gsc-summary-data");
+    const grid = document.getElementById("deep-traffic-gsc-summary-data");
+    if (!grid) return;
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("deep-traffic-gsc-summary-data", "Run GSC capture first.");
+    const items = transformGSCSummary(gsc);
+    if (!items.length) return renderEmptyState("deep-traffic-gsc-summary-data", "No GSC data available.");
+    items.forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card metric-card";
+      card.innerHTML = `<div><div class="name">${m.name}</div><div class="unit">${m.sub || '30 days'}</div></div><div><span class="value">${m.value}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDeepTrafficGSCAlmost() {
+    clearGrid("deep-traffic-gsc-almost-data");
+    const grid = document.getElementById("deep-traffic-gsc-almost-data");
+    if (!grid) return;
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("deep-traffic-gsc-almost-data", "Run GSC capture first.");
+    const items = transformGSCAlmost(gsc);
+    if (!items.length) {
+      renderEmptyState("deep-traffic-gsc-almost-data", "No pages in positions 11–20.");
+      return;
+    }
+    items.forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1.5fr auto auto;gap:16px;align-items:center"><div style="font-family:var(--mono);font-size:13px;color:var(--accent)">${m.url}</div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Impressions</div><div style="font-weight:700">${m.impressions.toLocaleString()}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Position</div><div style="font-weight:700;color:var(--warn)">${m.position}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDeepTrafficGSCLowCTR() {
+    clearGrid("deep-traffic-gsc-lowctr-data");
+    const grid = document.getElementById("deep-traffic-gsc-lowctr-data");
+    if (!grid) return;
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("deep-traffic-gsc-lowctr-data", "Run GSC capture first.");
+    const items = transformGSCLowCTR(gsc);
+    if (!items.length) {
+      renderEmptyState("deep-traffic-gsc-lowctr-data", "No pages with low CTR (≥500 impressions, <2% CTR).");
+      return;
+    }
+    items.forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1.5fr auto auto;gap:16px;align-items:center"><div style="font-family:var(--mono);font-size:13px;color:var(--accent)">${m.url}</div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Impressions</div><div style="font-weight:700">${m.impressions.toLocaleString()}</div></div><div style="text-align:right"><div style="font-size:10px;color:var(--muted);text-transform:uppercase">CTR</div><div style="font-weight:700;color:var(--bad)">${m.ctr}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderDeepTrafficGSCCoverage() {
+    clearGrid("deep-traffic-gsc-coverage-data");
+    const grid = document.getElementById("deep-traffic-gsc-coverage-data");
+    if (!grid) return;
+    const stub = document.createElement("div"); stub.className = "data-card";
+    stub.innerHTML = `<div style="color:var(--muted);font-size:13px">Index coverage data requires the Google Search Console URL Inspection API, which is not available in batch mode. Use the <a href="https://search.google.com/search-console/index" target="_blank" style="color:var(--accent)">GSC Coverage report</a> directly to review indexed vs. not-indexed pages.</div>`;
+    grid.appendChild(stub);
+  }
+
+  function renderGA4Summary() {
+    clearGrid("ga4-summary-data");
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("ga4-summary-data", "Run GA4 capture first.");
+    const grid = document.getElementById("ga4-summary-data");
+    transformGA4Summary(ga4).forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card metric-card";
+      card.innerHTML = `<div><div class="name">${m.name}</div><div class="unit">${m.sub}</div></div><div><span class="value">${m.value}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGA4Pages() {
+    clearGrid("ga4-pages-data");
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("ga4-pages-data", "Run GA4 capture first.");
+    const grid = document.getElementById("ga4-pages-data");
+    transformGA4Pages(ga4).forEach(p => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${p.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Sessions</div><div style="font-weight:700;color:var(--ink)">${p.sessions}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Bounce</div><div style="font-weight:700;color:var(--ink)">${p.bounce}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Duration</div><div style="font-weight:700;color:var(--ink)">${p.duration}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Conv.</div><div style="font-weight:700;color:var(--ink)">${p.conversions}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGA4Engagement() {
+    clearGrid("ga4-engagement-data");
+    const ga4 = captureData('ga4');
+    if (!ga4) return renderEmptyState("ga4-engagement-data", "Run GA4 capture first.");
+    const grid = document.getElementById("ga4-engagement-data");
+    const eng = transformGA4Engagement(ga4);
+    if (eng.ignited.length) {
+      const ic = document.createElement("div"); ic.className = "data-card summary-card";
+      ic.innerHTML = `<h3 style="margin:0 0 12px 0; font-size:16px; color:var(--good)">✓ Ignited Pages</h3>${eng.ignited.map(p => `<div class="kv"><div class="k">${p.url}</div><div class="v" style="font-size:11px;text-align:left;font-family:var(--sans)">${p.reason}</div></div>`).join("")}`;
+      grid.appendChild(ic);
+    }
+    if (eng.extinguished.length) {
+      const ec = document.createElement("div"); ec.className = "data-card";
+      ec.innerHTML = `<h3 style="margin:0 0 12px 0; font-size:16px; color:var(--bad)">✕ Extinguished Pages</h3>${eng.extinguished.map(p => `<div class="kv"><div class="k">${p.url}</div><div class="v" style="font-size:11px;text-align:left;font-family:var(--sans)">${p.reason}</div></div>`).join("")}`;
+      grid.appendChild(ec);
+    }
+    if (!eng.ignited.length && !eng.extinguished.length) renderEmptyState("ga4-engagement-data", "No engagement signals found.");
+  }
+
+  function renderGSCSummary() {
+    clearGrid("gsc-summary-data");
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("gsc-summary-data", "Run GSC capture first.");
+    const grid = document.getElementById("gsc-summary-data");
+    transformGSCSummary(gsc).forEach(m => {
+      const card = document.createElement("div"); card.className = "data-card metric-card";
+      card.innerHTML = `<div><div class="name">${m.name}</div><div class="unit">${m.sub}</div></div><div><span class="value">${m.value}</span></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGSCPages() {
+    clearGrid("gsc-pages-data");
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("gsc-pages-data", "Run GSC capture first.");
+    const grid = document.getElementById("gsc-pages-data");
+    transformGSCPages(gsc).forEach(p => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${p.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Clicks</div><div style="font-weight:700;color:var(--ink)">${p.clicks}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Impr.</div><div style="font-weight:700;color:var(--ink)">${p.impressions}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">CTR</div><div style="font-weight:700;color:var(--ink)">${p.ctr}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Position</div><div style="font-weight:700;color:var(--ink)">${p.position}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGSCAlmost() {
+    clearGrid("gsc-almost-data");
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("gsc-almost-data", "Run GSC capture first.");
+    const data = transformGSCAlmost(gsc);
+    if (!data.length) return renderEmptyState("gsc-almost-data", "No pages in positions 11-20.");
+    const grid = document.getElementById("gsc-almost-data");
+    data.forEach(p => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${p.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Impressions</div><div style="font-weight:700;color:var(--ink)">${p.impressions}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Position</div><div style="font-weight:700;color:var(--warn);font-size:16px">${p.position}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderGSCLowCTR() {
+    clearGrid("gsc-lowctr-data");
+    const gsc = captureData('gsc');
+    if (!gsc) return renderEmptyState("gsc-lowctr-data", "Run GSC capture first.");
+    const data = transformGSCLowCTR(gsc);
+    if (!data.length) return renderEmptyState("gsc-lowctr-data", "No high-impression/low-CTR pages found.");
+    const grid = document.getElementById("gsc-lowctr-data");
+    data.forEach(p => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${p.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Impressions</div><div style="font-weight:700;color:var(--ink)">${p.impressions}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">CTR</div><div style="font-weight:700;color:var(--bad);font-size:16px">${p.ctr}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderBilingualCoverage() {
+    clearGrid("bilingual-coverage-data");
+    const bi = captureData('bilingual');
+    if (!bi) return renderEmptyState("bilingual-coverage-data", "Run Bilingual Audit first.");
+    const grid = document.getElementById("bilingual-coverage-data");
+    const c = transformBilingualCoverage(bi);
+    const card = document.createElement("div"); card.className = "data-card summary-card";
+    card.innerHTML = `<div class="kv"><div class="k">Total pages</div><div class="v">${c.totalPages}</div></div><div class="kv"><div class="k">English pages</div><div class="v">${c.englishPages}</div></div><div class="kv"><div class="k">Spanish pages</div><div class="v">${c.spanishPages}</div></div><div class="kv"><div class="k">Coverage %</div><div class="v" style="color:var(--warn);font-size:20px">${c.coveragePct}%</div></div>`;
+    grid.appendChild(card);
+  }
+
+  function renderBilingualGaps() {
+    clearGrid("bilingual-gaps-data");
+    const bi = captureData('bilingual');
+    if (!bi) return renderEmptyState("bilingual-gaps-data", "Run Bilingual Audit first.");
+    const data = transformBilingualGaps(bi);
+    if (!data.length) return renderEmptyState("bilingual-gaps-data", "No translation gaps found.");
+    const grid = document.getElementById("bilingual-gaps-data");
+    data.forEach(g => {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:center"><div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">English</div><div style="font-family:var(--mono); font-size:13px; color:var(--ink)">${g.englishUrl}</div></div><div style="text-align:center"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:rgba(239,68,68,0.15);color:var(--bad);font-size:10px;font-weight:700;text-transform:uppercase">${g.status}</span></div><div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Spanish (expected)</div><div style="font-family:var(--mono); font-size:13px; color:var(--muted)">${g.spanishUrl}</div></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderBilingualHreflang() {
+    clearGrid("bilingual-hreflang-data");
+    const bi = captureData('bilingual');
+    if (!bi) return renderEmptyState("bilingual-hreflang-data", "Run Bilingual Audit first.");
+    const grid = document.getElementById("bilingual-hreflang-data");
+
+    const entries = bi.hreflang || [];
+    if (!entries.length) return renderEmptyState("bilingual-hreflang-data", "No hreflang tags found on any crawled page.");
+
+    entries.forEach(entry => {
+      const hasIssues = entry.issues?.length > 0;
+      const tagsHtml = entry.tags.length
+        ? entry.tags.map(t => `<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--surface);border:1px solid var(--line);margin:2px;display:inline-block"><strong>${t.hreflang}</strong> → ${t.href}</span>`).join('')
+        : '<span style="font-size:12px;color:var(--muted)">No tags</span>';
+      const issuesHtml = hasIssues
+        ? `<div style="margin-top:8px">${entry.issues.map(i => `<div style="font-size:12px;color:var(--bad);margin-top:4px">⚠ ${i}</div>`).join('')}</div>`
+        : '<div style="font-size:12px;color:var(--good);margin-top:6px">✓ No issues</div>';
+      const card = document.createElement("div"); card.className = "data-card";
+      card.style.borderColor = hasIssues ? 'rgba(239,68,68,0.3)' : '';
+      card.innerHTML = `
+        <div style="font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:10px">${entry.url}</div>
+        <div style="flex-wrap:wrap;display:flex;gap:4px">${tagsHtml}</div>
+        ${issuesHtml}
+      `;
+      grid.appendChild(card);
+    });
+
+    if (bi.limitations?.length) {
+      const note = document.createElement("div"); note.className = "data-card";
+      note.innerHTML = `<div style="color:var(--muted);font-size:12px"><strong>Note:</strong> ${bi.limitations[0]}</div>`;
+      grid.appendChild(note);
+    }
+  }
+
+  function renderRecommendationCards(data, gridId) {
+    clearGrid(gridId);
+    if (!data.length) return renderEmptyState(gridId, "No recommendations in this category.");
+    const grid = document.getElementById(gridId);
+    data.forEach((r, i) => {
+      const card = document.createElement("div");
+      card.className = `data-card rec-card ${r.priority}`;
+      card.innerHTML = `
+        <div class="rank">P${i+1}</div>
+        <div>
+          <div class="action">${r.action}</div>
+          <div class="source">Source: ${r.source}</div>
+          <div class="notes-area">
+            <div class="edit-label">Operator notes</div>
+            <textarea class="edit-field" data-rec-id="${r.id}" placeholder="Add notes, deadlines, or context…">${r.notes}</textarea>
+            <div class="checkbox-row">
+              <input type="checkbox" ${r.included !== false ? 'checked' : ''} data-rec-toggle="${r.id}"> <span>Include in export</span>
+            </div>
+          </div>
+        </div>
+        <div class="impact">Est. impact<span class="v">${r.impact}</span><div style="margin-top:8px;font-size:10px">Effort<span class="v" style="font-size:14px">${r.effort}</span></div></div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  async function saveRecommendations() {
+    if (!STATE.hostname) return;
+    const recs = captureData('recommendations');
+    if (!Array.isArray(recs)) return showToast('No recommendations to save', true);
+    document.querySelectorAll('[data-rec-id]').forEach(ta => {
+      const rec = recs.find(r => r.id === ta.dataset.recId);
+      if (rec) rec.notes = ta.value;
+    });
+    document.querySelectorAll('[data-rec-toggle]').forEach(cb => {
+      const rec = recs.find(r => r.id === cb.dataset.recToggle);
+      if (rec) rec.included = cb.checked;
+    });
+    try {
+      await api('PUT', `/api/workspace/${STATE.hostname}/recommendations`, { recommendations: recs });
+      showToast('Recommendations saved');
+    } catch (e) { showToast('Save failed: ' + e.message, true); }
+  }
+
+  function renderNarrativeSingle(gridId, section) {
+    clearGrid(gridId);
+    if (!section) return renderEmptyState(gridId, "Run Narrative Report first.");
+    const grid = document.getElementById(gridId);
+    const prose = section.editedProse || section.generatedProse || '';
+    const card = document.createElement("div"); card.className = "data-card narrative-card";
+    card.innerHTML = `
+      <div class="ai-ref"><p>${section.generatedProse}</p></div>
+      <div class="edit-area">
+        <div class="edit-label">Your edit (English)</div>
+        <textarea class="edit-field" rows="6" data-narrative-id="${section.id}" data-narrative-lang="en" placeholder="Rewrite, trim, or replace…">${prose}</textarea>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px">
+        <button class="btn sm" onclick="copyNarrative('${section.id}', 'en')">Copy final text</button>
+        <button class="btn sm ghost" onclick="resetNarrative('${section.id}')">Reset</button>
+        <button class="btn sm primary" onclick="saveNarrativeSections()">Save</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  function renderNarrativeBilingual(gridId, section) {
+    clearGrid(gridId);
+    if (!section) return renderEmptyState(gridId, "Run Narrative Report first.");
+    const grid = document.getElementById(gridId);
+    const proseEn = section.editedProse || section.generatedProse || '';
+    const proseEs = section.editedProseEs || '';
+    const card = document.createElement("div"); card.className = "data-card narrative-card";
+    card.innerHTML = `
+      <div class="ai-ref"><p><strong>AI:</strong> ${section.generatedProse}</p></div>
+      <div class="bilingual-cols">
+        <div><div class="col-label">English</div><textarea class="edit-field" rows="6" data-narrative-id="${section.id}" data-narrative-lang="en" placeholder="Edit English…">${proseEn}</textarea></div>
+        <div><div class="col-label">Spanish</div><textarea class="edit-field" rows="6" data-narrative-id="${section.id}" data-narrative-lang="es" placeholder="Edit Spanish…">${proseEs}</textarea></div>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px">
+        <button class="btn sm" onclick="copyNarrative('${section.id}', 'en')">Copy EN</button>
+        <button class="btn sm" onclick="copyNarrative('${section.id}', 'es')">Copy ES</button>
+        <button class="btn sm ghost" onclick="resetNarrative('${section.id}')">Reset both</button>
+        <button class="btn sm primary" onclick="saveNarrativeSections()">Save</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+
+  function copyNarrative(sectionId, lang) {
+    const ta = document.querySelector(`[data-narrative-id="${sectionId}"][data-narrative-lang="${lang}"]`);
+    if (ta) { navigator.clipboard.writeText(ta.value); showToast('Copied to clipboard'); }
+  }
+
+  function resetNarrative(sectionId) {
+    const narrativeData = captureData('narrative');
+    if (!Array.isArray(narrativeData)) return;
+    const section = narrativeData.find(s => s.id === sectionId);
+    if (!section) return;
+    document.querySelectorAll(`[data-narrative-id="${sectionId}"]`).forEach(ta => { ta.value = section.generatedProse || ''; });
+  }
+
+  async function saveNarrativeSections() {
+    if (!STATE.hostname) return;
+    const narrativeData = captureData('narrative');
+    if (!Array.isArray(narrativeData)) return showToast('No narrative data to save', true);
+    document.querySelectorAll('[data-narrative-id]').forEach(ta => {
+      const sec = narrativeData.find(s => s.id === ta.dataset.narrativeId);
+      if (!sec) return;
+      if (ta.dataset.narrativeLang === 'en') sec.editedProse = ta.value;
+      if (ta.dataset.narrativeLang === 'es') sec.editedProseEs = ta.value;
+    });
+    try {
+      await api('PUT', `/api/workspace/${STATE.hostname}/narrative`, { sections: narrativeData });
+      showToast('Narrative saved');
+    } catch (e) { showToast('Save failed: ' + e.message, true); }
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     ROUTING
+     ═══════════════════════════════════════════════════════ */
+  const VIEWS = [
+    "landing",
+    "lighthouse-hub", "lighthouse-scores", "lighthouse-vitals", "lighthouse-opportunities", "lighthouse-findings", "lighthouse-stack",
+    "crawler-hub", "crawler-pages", "crawler-broken", "crawler-images", "crawler-schema", "crawler-readability", "crawler-screenshots",
+    "broad-traffic-hub", "broad-traffic-overview", "broad-traffic-gbp", "broad-traffic-ads", "broad-traffic-social", "broad-traffic-index", "broad-traffic-competitor",
+    "deep-traffic-hub", "deep-traffic-ga4-summary", "deep-traffic-ga4-pages", "deep-traffic-ga4-devices", "deep-traffic-ga4-flow", "deep-traffic-gsc-summary", "deep-traffic-gsc-almost", "deep-traffic-gsc-lowctr", "deep-traffic-gsc-coverage",
+    "bilingual-hub", "bilingual-coverage", "bilingual-gaps", "bilingual-hreflang",
+    "recommendations-hub", "recommendations-quickwins", "recommendations-technical", "recommendations-content", "recommendations-engagement", "recommendations-bilingual",
+    "narrative-hub", "narrative-summary", "narrative-technical", "narrative-content", "narrative-traffic", "narrative-bilingual", "narrative-opportunity",
+    "edits-hub", "edits-editor", "edits-package"
+  ];
+
+  const CRUMBS = {
+    "landing": "Workspace",
+    "lighthouse-hub": "Workspace / Lighthouse",
+    "lighthouse-scores": "Workspace / Lighthouse / Overall Scores",
+    "lighthouse-vitals": "Workspace / Lighthouse / Core Web Vitals",
+    "lighthouse-opportunities": "Workspace / Lighthouse / Optimization Opportunities",
+    "lighthouse-findings": "Workspace / Lighthouse / SEO & Best Practices",
+    "lighthouse-stack": "Workspace / Lighthouse / Tech Stack",
+    "crawler-hub": "Workspace / Site Crawler",
+    "crawler-pages": "Workspace / Site Crawler / Page Content Inventory",
+    "crawler-broken": "Workspace / Site Crawler / Broken Links",
+    "crawler-images": "Workspace / Site Crawler / Image Inventory",
+    "crawler-schema": "Workspace / Site Crawler / Schema & AEO",
+    "crawler-readability": "Workspace / Site Crawler / Readability",
+    "crawler-screenshots": "Workspace / Site Crawler / Screenshots",
+    "broad-traffic-hub": "Workspace / Public Pulse",
+    "broad-traffic-overview": "Workspace / Public Pulse / Traffic Overview",
+    "broad-traffic-gbp": "Workspace / Public Pulse / Google Business Profile",
+    "broad-traffic-ads": "Workspace / Public Pulse / Ad Spend Detection",
+    "broad-traffic-social": "Workspace / Public Pulse / Social Footprint",
+    "broad-traffic-index": "Workspace / Public Pulse / Index Status",
+    "broad-traffic-competitor": "Workspace / Public Pulse / Competitor Comparison",
+    "deep-traffic-hub": "Workspace / Open Books",
+    "deep-traffic-ga4-summary": "Workspace / Open Books / GA4 — 30-Day Summary",
+    "deep-traffic-ga4-pages": "Workspace / Open Books / GA4 — Per-Page Performance",
+    "deep-traffic-ga4-devices": "Workspace / Open Books / GA4 — Device & Language",
+    "deep-traffic-ga4-flow": "Workspace / Open Books / GA4 — Landing & Exit",
+    "deep-traffic-gsc-summary": "Workspace / Open Books / GSC — Search Performance",
+    "deep-traffic-gsc-almost": "Workspace / Open Books / GSC — Almost-Ranking",
+    "deep-traffic-gsc-lowctr": "Workspace / Open Books / GSC — High Impr/Low CTR",
+    "deep-traffic-gsc-coverage": "Workspace / Open Books / GSC — Index Coverage",
+    "ga4-hub": "Workspace / GA4",
+    "ga4-summary": "Workspace / GA4 / 30-Day Traffic Summary",
+    "ga4-pages": "Workspace / GA4 / Per-Page Performance",
+    "ga4-engagement": "Workspace / GA4 / Engagement Analysis",
+    "gsc-hub": "Workspace / GSC",
+    "gsc-summary": "Workspace / GSC / Search Performance Summary",
+    "gsc-pages": "Workspace / GSC / Top Pages by Clicks",
+    "gsc-almost": "Workspace / GSC / Almost-Ranking Pages",
+    "gsc-lowctr": "Workspace / GSC / High Impression Low CTR",
+    "bilingual-hub": "Workspace / Bilingual Audit",
+    "bilingual-coverage": "Workspace / Bilingual Audit / Language Coverage",
+    "bilingual-gaps": "Workspace / Bilingual Audit / Translation Gaps",
+    "bilingual-hreflang": "Workspace / Bilingual Audit / hreflang Audit",
+    "recommendations-hub": "Workspace / Recommendations",
+    "recommendations-quickwins": "Workspace / Recommendations / Quick Wins",
+    "recommendations-technical": "Workspace / Recommendations / Technical Fixes",
+    "recommendations-content": "Workspace / Recommendations / Content Opportunities",
+    "recommendations-engagement": "Workspace / Recommendations / Engagement Fixes",
+    "recommendations-bilingual": "Workspace / Recommendations / Bilingual Gaps",
+    "narrative-hub": "Workspace / Narrative Report",
+    "narrative-summary": "Workspace / Narrative Report / Executive Summary",
+    "narrative-technical": "Workspace / Narrative Report / Technical Health",
+    "narrative-content": "Workspace / Narrative Report / Content & SEO",
+    "narrative-traffic": "Workspace / Narrative Report / Traffic & Engagement",
+    "narrative-bilingual": "Workspace / Narrative Report / Bilingual Presence",
+    "narrative-opportunity": "Workspace / Narrative Report / The Opportunity",
+    "edits-hub": "Workspace / Edits & Exports",
+    "edits-editor": "Workspace / Edits & Exports / Editor",
+    "edits-package": "Workspace / Edits & Exports / Package Builder"
+  };
+
+  function goto(id) {
+    if (!VIEWS.includes(id)) id = "landing";
+    location.hash = id === "landing" ? "" : id;
+  }
+
+  function render() {
+    const id = (location.hash.replace("#", "") || "landing");
+    const cur = VIEWS.includes(id) ? id : "landing";
+    VIEWS.forEach(v => {
+      const el = document.getElementById("view-" + v);
+      if (el) el.classList.toggle("active", v === cur);
+    });
+    const crumbs = document.getElementById("crumbs");
+    const trail = CRUMBS[cur] || "Workspace";
+    const parts = trail.split(" / ");
+    if (parts.length === 1) {
+      crumbs.innerHTML = `<span class="here">${parts[0]}</span>`;
+    } else {
+      crumbs.innerHTML = `<button class="back" onclick="history.back()">← Back</button><span>${parts.slice(0, -1).join(' / ')}</span><span class="sep">/</span><span class="here">${parts[parts.length - 1]}</span>`;
+    }
+    window.scrollTo(0, 0);
+  }
+
+  window.addEventListener("hashchange", render);
+
+  /* ═══════════════════════════════════════════════════════
+     EDITS & EXPORTS
+     ═══════════════════════════════════════════════════════ */
+  const EDITS_STATE = { selectedFile: null, selectedPackage: null };
+
+  const TOOL_LABEL = {
+    'broad-traffic': 'Public Pulse',
+    'lighthouse':    'Lighthouse',
+    'crawl':         'Site Crawler',
+    'bilingual':     'Bilingual Audit',
+    'deep-traffic':  'Open Books',
+    'recommendations': 'Recommendations',
+    'narrative':     'Narrative Report',
+  };
+
+  function getArtifacts() {
+    const captures = STATE.workspace?.captures || {};
+    const out = [];
+    Object.entries(TOOL_LABEL).forEach(([tool, label]) => {
+      const slot = captures[tool];
+      if (!slot?.latest) return;
+      const raw = JSON.stringify(slot.latest.data || {}, null, 2);
+      const bytes = new TextEncoder().encode(raw).length;
+      const size = bytes > 1048576 ? `${(bytes/1048576).toFixed(1)} MB`
+                 : bytes > 1024    ? `${(bytes/1024).toFixed(0)} KB`
+                 :                   `${bytes} B`;
+      const modified = (slot.latest.timestamp || '').replace('T', ' ').slice(0, 16);
+      out.push({ id: `${tool}-json`, filename: `${tool}.json`, tool: label, type: 'json', size, modified, data: slot.latest.data });
+
+      if (tool === 'lighthouse' && slot.latest.data?.htmlReportPath) {
+        out.push({ id: 'lighthouse-html', filename: 'lighthouse-report.html', tool: label, type: 'html', size: '', modified,
+          href: `/reports/${STATE.hostname}/lighthouse-report.html` });
+      }
+
+      if (tool === 'crawl' && slot.latest.data?.screenshots?.length > 0) {
+        const count = slot.latest.data.screenshots.length;
+        out.push({ id: 'crawl-screenshots', filename: `screenshots/ (${count} files)`, tool: 'Site Crawler', type: 'folder', size: '', modified,
+          href: `/reports/${STATE.hostname}/screenshots/` });
+      }
+    });
+
+    // Narrative EN
+    const narrativeSlot = captures['narrative'];
+    if (narrativeSlot?.latest?.data && Array.isArray(narrativeSlot.latest.data)) {
+      const sections = narrativeSlot.latest.data;
+      const mdEn = sections.map(s => `## ${s.title}\n\n${s.editedProse || s.generatedProse || ''}`).join('\n\n');
+      const modified = (narrativeSlot.latest.timestamp || '').replace('T', ' ').slice(0, 16);
+      out.push({ id: 'narrative-en-md', filename: 'narrative-en.md', tool: 'Narrative Report', type: 'md', size: `${Math.round(new TextEncoder().encode(mdEn).length / 1024)} KB`, modified,
+        download: { filename: `${STATE.hostname}-narrative-en.md`, content: mdEn } });
+
+      // Narrative ES — only sections where Spanish text exists
+      const esSections = sections.filter(s => s.editedProseEs);
+      if (esSections.length > 0) {
+        const mdEs = esSections.map(s => `## ${s.title}\n\n${s.editedProseEs}`).join('\n\n');
+        out.push({ id: 'narrative-es-md', filename: 'narrative-es.md', tool: 'Narrative Report', type: 'md', size: `${Math.round(new TextEncoder().encode(mdEs).length / 1024)} KB`, modified,
+          download: { filename: `${STATE.hostname}-narrative-es.md`, content: mdEs } });
+      }
+    }
+
+    // Recommendations annotated
+    const recsSlot = captures['recommendations'];
+    if (recsSlot?.latest?.data && Array.isArray(recsSlot.latest.data)) {
+      const included = recsSlot.latest.data.filter(r => r.included !== false);
+      if (included.length > 0) {
+        const modified = (recsSlot.latest.timestamp || '').replace('T', ' ').slice(0, 16);
+        const mdRecs = `# Recommendations — ${STATE.hostname}\n\n` +
+          included.map((r, i) => {
+            let line = `### ${i + 1}. ${r.action}\n**Source:** ${r.source} · **Impact:** ${r.impact} · **Effort:** ${r.effort}`;
+            if (r.notes) line += `\n> ${r.notes}`;
+            return line;
+          }).join('\n\n');
+        out.push({ id: 'recommendations-md', filename: 'recommendations-annotated.md', tool: 'Recommendations', type: 'md', size: `${Math.round(new TextEncoder().encode(mdRecs).length / 1024)} KB`, modified,
+          download: { filename: `${STATE.hostname}-recommendations.md`, content: mdRecs } });
+      }
+    }
+
+    return out;
+  }
+
+  const PACKAGES = [
+    { id: "page-builder", name: "Page Builder Package", desc: "What the page builder needs to redesign the site", files: ["crawl.json", "recommendations.json", "narrative-en.md", "narrative-es.md"] },
+    { id: "presentation", name: "Presentation Package", desc: "For the prospect-facing conversation", files: ["narrative-en.md", "narrative-es.md", "lighthouse-summary.md", "deep-traffic-summary.md", "screenshots/*.png"] },
+    { id: "full-dump", name: "Full Dump", desc: "Everything in reports/{hostname}/ for archiving", files: ["all-artifacts"] }
+  ];
+
+  // Mock file contents (real version would load from disk)
+  const MOCK_FILE_CONTENT = {
+    "lighthouse.json": JSON.stringify({
+      url: "https://taliscpas.com",
+      timestamp: "2026-05-13T10:42:00Z",
+      categories: { performance: { score: 0.85 }, seo: { score: 0.92 }, accessibility: { score: 0.74 }, "best-practices": { score: 0.88 } },
+      audits: { "largest-contentful-paint": { numericValue: 2100 }, "cumulative-layout-shift": { numericValue: 0.02 } }
+    }, null, 2),
+    "lighthouse-summary.md": "# Lighthouse Summary\n\n## Scores\n- **Performance:** 85/100\n- **SEO:** 92/100\n- **Accessibility:** 74/100 ⚠️\n- **Best Practices:** 88/100\n\n## Core Web Vitals\n- **LCP:** 2.1s (pass)\n- **INP:** 80ms (pass)\n- **CLS:** 0.02 (pass)\n\n## Top Opportunities\n1. Unused JavaScript — −120 KB\n2. Improperly sized hero image −300 KB\n3. Render-blocking CSS − 45 KB",
+    "crawl.json": JSON.stringify({
+      pagesCrawled: 245,
+      brokenLinks: 12,
+      images: 560,
+      schemaObjects: 38
+    }, null, 2),
+    "crawl-summary.md": "# Crawl Summary\n\n- **Pages crawled:** 245\n- **Broken links:** 12 (4xx errors)\n- **Images:** 560\n- **Schema objects:** 38\n\n## Top Issues\n1. 12 broken links across primary nav and footer\n2. /about, /contact missing meta descriptions\n3. FAQPage and Review schema absent on service pages",
+    "recommendations.json": JSON.stringify({
+      quickwins: [{ priority: "high", action: "Add FAQPage and Review schema", source: "Crawl", impact: "High", effort: "Low", operator_notes: "Schedule for sprint 2" }]
+    }, null, 2),
+    "recommendations.md": "# Priority Recommendations\n\n## Quick Wins (high impact, low effort)\n1. **Add FAQPage and Review schema** — Source: Crawl • Impact: High • Effort: Low\n   > Schedule for sprint 2\n\n2. **Fix 12 broken links** — Source: Crawl • Impact: Medium • Effort: Low",
+    "narrative-en.md": "# Talis CPAs — Diagnostic Narrative\n\n## Executive Summary\nTaliscpas.com is technically competent but commercially under-tuned. Performance is good on the surface — most Core Web Vitals pass on mobile — but the homepage is leaking nearly half a megabyte to unused JavaScript and an oversized hero image.\n\n## The Opportunity\nThree things, in order: ship the schema additions and image fixes (one week of dev), rewrite the two missing meta descriptions and translate the top 3 conversion pages to Spanish (one week of copy + translation), and re-run the audit in 30 days to confirm.",
+    "narrative-es.md": "# Talis CPAs — Diagnóstico Narrativo\n\n## Resumen Ejecutivo\nTaliscpas.com es técnicamente competente pero comercialmente sub-utilizado. El rendimiento es bueno en la superficie — la mayoría de los Core Web Vitals pasan en móvil — pero la página principal está perdiendo casi medio megabyte por JavaScript no utilizado y una imagen hero sobredimensionada.\n\n## La Oportunidad\nTres cosas, en orden: implementar las adiciones de schema y correcciones de imágenes (una semana de desarrollo), reescribir las dos meta descripciones faltantes y traducir las 3 páginas principales de conversión al español (una semana de redacción + traducción), y volver a ejecutar la auditoría en 30 días para confirmar.",
+    "broad-traffic.json": JSON.stringify({ estimatedVisits: 8400, sources: { organic: 0.62, direct: 0.18, referral: 0.12, social: 0.08 } }, null, 2),
+    "broad-traffic-summary.md": "# Public Pulse Summary\n\nEstimated monthly visits: ~8,400\n- Organic: 62%\n- Direct: 18%\n- Referral: 12%\n- Social: 8%",
+    "ga4.json": JSON.stringify({ sessions: 12500, bounceRate: 0.45, avgDuration: 210, conversions: 250 }, null, 2),
+    "gsc.json": JSON.stringify({ clicks: 8000, impressions: 150000, ctr: 0.053, avgPosition: 12.5 }, null, 2),
+    "deep-traffic-summary.md": "# Open Books Summary\n\n## GA4 (30 days)\n- Sessions: 12,500\n- Bounce: 45%\n- Conversions: 250\n\n## GSC (30 days)\n- Clicks: 8,000\n- Impressions: 150,000\n- Avg position: 12.5",
+    "bilingual.json": JSON.stringify({ totalPages: 245, englishPages: 245, spanishPages: 103, coveragePct: 42 }, null, 2),
+    "bilingual-summary.md": "# Bilingual Audit Summary\n\nSpanish coverage: 42% (103 of 245 pages)\n\n## Top translation gaps\n- /pricing\n- /features\n- /blog/best-practices"
+  };
+
+  function renderEditsHub() {
+    const artifactsGrid = document.getElementById("edits-artifact-cards");
+    if (artifactsGrid) {
+      artifactsGrid.innerHTML = "";
+      const artifacts = getArtifacts();
+      if (!artifacts.length) {
+        artifactsGrid.innerHTML = `<p style="color:var(--muted);font-size:13px">No captures yet — run tools above to generate artifacts.</p>`;
+      }
+      artifacts.forEach(a => {
+        const card = document.createElement("div");
+        card.className = "artifact-card";
+        card.innerHTML = `
+          <span class="arrow">→</span>
+          <span class="file-type ${a.type}">${a.type}</span>
+          <div class="filename">${a.filename}</div>
+          <div class="tool-name">${a.tool}${a.edited ? ' • <em style="color:var(--accent)">edited</em>' : ''}</div>
+          <div class="meta">
+            <span>${a.size}</span>
+            <span>${a.modified}</span>
+          </div>
+        `;
+        card.addEventListener("click", () => {
+          if (a.href) { window.open(a.href, '_blank'); return; }
+          if (a.download) {
+            const blob = new Blob([a.download.content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url; link.download = a.download.filename;
+            link.click(); URL.revokeObjectURL(url);
+            return;
+          }
+          EDITS_STATE.selectedFile = a;
+          goto("edits-editor");
+        });
+        artifactsGrid.appendChild(card);
+      });
+    }
+
+    const packageGrid = document.getElementById("edits-package-cards");
+    if (packageGrid) {
+      packageGrid.innerHTML = "";
+      PACKAGES.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "section-card";
+        card.innerHTML = `
+          <h4>${p.name}</h4>
+          <p class="desc">${p.desc}</p>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted)">${p.files.length} file${p.files.length>1?'s':''}</div>
+          <span class="arrow">→</span>
+        `;
+        card.addEventListener("click", () => {
+          EDITS_STATE.selectedPackage = p;
+          goto("edits-package");
+        });
+        packageGrid.appendChild(card);
+      });
+    }
+  }
+
+  function renderEditor() {
+    const file = EDITS_STATE.selectedFile;
+    const fnameEl = document.getElementById("editor-filename");
+    const metaEl = document.getElementById("editor-meta");
+    const srcEl = document.getElementById("editor-source");
+    const previewEl = document.getElementById("editor-preview");
+    if (!fnameEl) return;
+    if (!file) {
+      fnameEl.textContent = "(no file selected)";
+      metaEl.textContent = "Pick a file from the Edits & Exports hub.";
+      srcEl.value = "";
+      previewEl.innerHTML = "";
+      return;
+    }
+    fnameEl.textContent = file.filename;
+    metaEl.textContent = `${file.type.toUpperCase()} • ${file.size} • ${file.tool} • Last modified ${file.modified}${file.edited ? ' • edited' : ''}`;
+    const raw = file.data ? JSON.stringify(file.data, null, 2) : `// ${file.filename}\n// (no data captured yet)`;
+    srcEl.value = raw;
+    renderPreview(raw, file.type, previewEl);
+    // Live preview on input
+    srcEl.oninput = () => renderPreview(srcEl.value, file.type, previewEl);
+  }
+
+  function renderPreview(content, type, el) {
+    if (type === "md") {
+      el.innerHTML = mdToHtml(content);
+    } else if (type === "json") {
+      try {
+        const parsed = JSON.parse(content);
+        el.innerHTML = `<pre>${syntaxHighlightJSON(JSON.stringify(parsed, null, 2))}</pre>`;
+      } catch (e) {
+        el.innerHTML = `<pre style="color:var(--bad)">Invalid JSON: ${e.message}</pre>`;
+      }
+    }
+  }
+
+  function mdToHtml(md) {
+    let html = md;
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding-left:14px;margin:8px 0;color:var(--muted);font-style:italic">$1</blockquote>');
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+    html = html.split(/\n\n+/).map(p => {
+      if (/^<(h\d|ul|ol|blockquote|pre)/.test(p.trim())) return p;
+      return p.trim() ? `<p>${p.replace(/\n/g, '<br>')}</p>` : '';
+    }).join('\n');
+    return html;
+  }
+
+  function syntaxHighlightJSON(json) {
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      let cls = 'json-number';
+      if (/^"/.test(m)) cls = /:$/.test(m) ? 'json-key' : 'json-string';
+      else if (/true|false/.test(m)) cls = 'json-bool';
+      else if (/null/.test(m)) cls = 'json-bool';
+      return `<span class="${cls}">${m}</span>`;
+    });
+  }
+
+  function renderPackageBuilder() {
+    const pkg = EDITS_STATE.selectedPackage;
+    const nameEl = document.getElementById("package-name");
+    const descEl = document.getElementById("package-desc");
+    const filesEl = document.getElementById("package-files-list");
+    if (!nameEl) return;
+    if (!pkg) {
+      nameEl.textContent = "(no package selected)";
+      descEl.textContent = "Pick a package from the Edits & Exports hub.";
+      filesEl.innerHTML = "";
+      return;
+    }
+    nameEl.textContent = pkg.name;
+    descEl.textContent = pkg.desc;
+
+    const artifacts = getArtifacts();
+    let files = pkg.files;
+    if (pkg.id === "full-dump") {
+      files = artifacts.map(a => a.filename).concat(["screenshots/*.png"]);
+    }
+
+    filesEl.innerHTML = files.map(fn => {
+      const type = fn.endsWith(".json") ? "json" : fn.endsWith(".md") ? "md" : fn.endsWith(".png") || fn.includes(".png") ? "png" : "json";
+      const artifact = artifacts.find(a => a.filename === fn);
+      const source = artifact ? artifact.tool : (fn.includes("screenshots") ? "Site Crawler captures" : "Workspace");
+      return `
+        <div class="package-file-row">
+          <input type="checkbox" checked>
+          <div>
+            <div class="filename">${fn}</div>
+            <div class="source">${source}</div>
+          </div>
+          <span class="file-type ${type}">${type}</span>
+          <span style="color:var(--muted);font-family:var(--mono);font-size:11px">${artifact ? artifact.size : "—"}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Hook into routing: when user navigates to edits-editor or edits-package, render the right content
+  window.addEventListener("hashchange", () => {
+    const id = (location.hash.replace("#", "") || "landing");
+    if (id === "edits-hub") renderEditsHub();
+    else if (id === "edits-editor") renderEditor();
+    else if (id === "edits-package") renderPackageBuilder();
+  });
+
+  /* ═══════════════════════════════════════════════════════
+     RENDER ALL
+     ═══════════════════════════════════════════════════════ */
+  function renderAll() {
+    renderToolCards();
+    renderSectionCards(LIGHTHOUSE_SECTIONS, "lighthouse-sections", "lighthouse");
+    renderLighthouseScores();
+    renderLighthouseVitals();
+    renderLighthouseOpportunities();
+    renderLighthouseFindings();
+    renderLighthouseStack();
+    renderSectionCards(CRAWLER_SECTIONS, "crawler-sections", "crawler");
+    renderCrawlerTechnicalSignals();
+    renderCrawlerPages();
+    renderCrawlerBroken();
+    renderCrawlerImages();
+    renderCrawlerSchema();
+    renderCrawlerReadability();
+    renderCrawlerScreenshots();
+    renderSectionCards(BROAD_TRAFFIC_SECTIONS, "broad-traffic-sections", "broad-traffic");
+    renderBroadTrafficOverview();
+    renderBroadTrafficGBP();
+    renderBroadTrafficAds();
+    renderBroadTrafficSocial();
+    renderBroadTrafficIndex();
+    renderBroadTrafficCompetitor();
+    renderSectionCards(DEEP_TRAFFIC_SECTIONS, "deep-traffic-sections", "deep-traffic");
+    renderDeepTrafficGA4Summary();
+    renderDeepTrafficGA4Pages();
+    renderDeepTrafficGA4Devices();
+    renderDeepTrafficGA4Flow();
+    renderDeepTrafficGSCSummary();
+    renderDeepTrafficGSCAlmost();
+    renderDeepTrafficGSCLowCTR();
+    renderDeepTrafficGSCCoverage();
+    renderSectionCards(BILINGUAL_SECTIONS, "bilingual-sections", "bilingual");
+    renderBilingualCoverage();
+    renderBilingualGaps();
+    renderBilingualHreflang();
+    const recs = bucketRecommendations(captureData('recommendations'));
+    renderRecommendationSectionCards(recs, "recommendations-sections");
+    renderRecommendationCards(recs.quickwins, "recommendations-quickwins-data");
+    renderRecommendationCards(recs.technical, "recommendations-technical-data");
+    renderRecommendationCards(recs.content, "recommendations-content-data");
+    renderRecommendationCards(recs.engagement, "recommendations-engagement-data");
+    renderRecommendationCards(recs.bilingual, "recommendations-bilingual-data");
+    renderSectionCards(NARRATIVE_SECTIONS, "narrative-sections", "narrative");
+    const nMap = narrativeSectionMap(captureData('narrative'));
+    renderNarrativeSingle("narrative-summary-data", nMap.summary);
+    renderNarrativeSingle("narrative-technical-data", nMap.technical);
+    renderNarrativeSingle("narrative-content-data", nMap.content);
+    renderNarrativeSingle("narrative-traffic-data", nMap.traffic);
+    renderNarrativeBilingual("narrative-bilingual-data", nMap.bilingual);
+    renderNarrativeBilingual("narrative-opportunity-data", nMap.opportunity);
+    renderEditsHub();
+  }
+
+  // Init
+  renderAll();
+  render();
+
+  // Auto-load if URL has a hostname parameter
+  const urlParams = new URLSearchParams(location.search);
+  const autoHost = urlParams.get('hostname') || urlParams.get('h');
+  if (autoHost) {
+    document.getElementById('prospect-url').value = autoHost;
+    handleLoadWorkspace();
+  }
+</script>
+
+</body>
+</html>
