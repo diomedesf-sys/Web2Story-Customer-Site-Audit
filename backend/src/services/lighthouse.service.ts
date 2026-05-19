@@ -8,8 +8,13 @@ export async function runLighthouseAudit(url: string) {
   // Use Playwright's Chromium so the same binary works locally and in Docker
   const chromePath = chromium.executablePath();
 
+  // Use a local profile dir to avoid Windows temp folder permission issues
+  const userDataDir = path.join(process.cwd(), '.lh-profile');
+  await fs.mkdir(userDataDir, { recursive: true });
+
   const chrome = await chromeLauncher.launch({
     chromePath,
+    userDataDir,
     chromeFlags: [
       '--headless=new',
       '--no-sandbox',

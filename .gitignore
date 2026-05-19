@@ -29,3 +29,6 @@ Thumbs.db
 
 # Claude Code internals
 .claude/
+
+# Lighthouse Chrome profile (auto-created at runtime)
+.lh-profile/
