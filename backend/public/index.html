@@ -2526,8 +2526,13 @@
       }
     } else {
       const note = document.createElement("div"); note.className = "data-card";
-      const hasKey = bt._status?.psi !== 'no-key';
-      note.innerHTML = `<div style="font-size:13px;color:var(--muted)">${hasKey ? 'PSI scores could not be fetched — check server logs.' : 'Add <code>GOOGLE_PSI_API_KEY</code> to <code>.env</code> to enable PageSpeed scores and real-world CRuX data.'}</div>`;
+      const psiStatus = bt._status?.psi;
+      const msg = psiStatus === 'no-key'
+        ? 'Add <code>GOOGLE_PSI_API_KEY</code> to <code>.env</code> to enable PageSpeed scores and real-world CRuX data.'
+        : psiStatus === 'site-too-slow'
+          ? 'PSI could not analyze this site — it exceeds the remote Lighthouse timeout (~30s). This itself confirms a critical performance problem. Use the local Lighthouse card for lab scores.'
+          : 'PSI scores could not be fetched — check server logs for details.';
+      note.innerHTML = `<div style="font-size:13px;color:var(--muted)">${msg}</div>`;
       grid.appendChild(note);
     }
 

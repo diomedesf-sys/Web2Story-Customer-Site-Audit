@@ -157,10 +157,13 @@ async function fetchPSI(url: string): Promise<PSIData | null> {
 
   try {
     const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=${apiKey}&category=performance&category=accessibility&category=seo&category=best-practices`;
-    const res = await fetch(endpoint, { signal: AbortSignal.timeout(45000) });
+    const res = await fetch(endpoint, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
-      console.warn('[broad-traffic/psi] API error:', res.status, await res.text().catch(() => ''));
-      return null;
+      const body = await res.json().catch(() => ({}));
+      const reason = body?.error?.errors?.[0]?.reason;
+      const msg = reason === 'lighthouseError' ? 'site-too-slow' : `api-error-${res.status}`;
+      console.warn(`[broad-traffic/psi] ${msg}`, body?.error?.message || '');
+      throw new Error(msg);
     }
 
     const data = await res.json();
@@ -198,22 +201,24 @@ export async function runBroadTrafficCapture(url: string) {
 
   console.log(`[broad-traffic] Starting parallel captures for ${hostname}`);
 
-  // Run everything in parallel
-  const [domainAge, gbp, indexedPages, psi] = await Promise.all([
+  // Run everything in parallel; PSI failure is non-fatal
+  const psiWrapped = await fetchPSI(url)
+    .then(data => ({ data, status: data ? 'done' : 'no-key' }))
+    .catch(e => ({ data: null as PSIData | null, status: e.message as string }));
+
+  const [domainAge, gbp, indexedPages] = await Promise.all([
     fetchDomainAge(hostname),
     fetchGBP(hostname),
     fetchIndexCount(hostname),
-    fetchPSI(url),
   ]);
 
-  const hasPSI = psi !== null;
   const hasGBP = gbp.businessName !== null || gbp.rating !== null;
 
   return {
     hostname,
     timestamp: new Date().toISOString(),
     domainAge,
-    psi: psi ?? null,
+    psi: psiWrapped.data,
     indexedPages,
     gbp,
     social: {
@@ -229,7 +234,7 @@ export async function runBroadTrafficCapture(url: string) {
     },
     _status: {
       domainAge: domainAge ? 'done' : 'error',
-      psi: hasPSI ? 'done' : (process.env.GOOGLE_PSI_API_KEY ? 'error' : 'no-key'),
+      psi: psiWrapped.status,
       indexedPages: indexedPages !== null ? 'done' : 'error',
       gbp: hasGBP ? 'done' : 'error',
       social: 'pending',
