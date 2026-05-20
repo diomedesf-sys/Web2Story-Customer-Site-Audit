@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, Browser } from 'playwright';
 
 interface GBPData {
   businessName: string | null;
@@ -29,6 +29,137 @@ interface PSIData {
     inp: CrUXMetric | null;
   } | null;
   strategy: 'mobile';
+}
+
+export interface SocialProfileCheck {
+  platform: string;
+  profileUrl: string;
+  reachable: boolean;
+  websiteInBio: string | null;
+  matchesDomain: boolean | null;
+  status: 'ok' | 'login-required' | 'not-found' | 'error';
+}
+
+type SocialLink = { platform: string; url: string };
+
+async function checkSingleProfile(
+  browser: Browser,
+  link: SocialLink,
+  hostname: string
+): Promise<SocialProfileCheck> {
+  const base: SocialProfileCheck = {
+    platform: link.platform,
+    profileUrl: link.url,
+    reachable: false,
+    websiteInBio: null,
+    matchesDomain: null,
+    status: 'error',
+  };
+
+  try {
+    const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    });
+
+    let response;
+    try {
+      response = await page.goto(link.url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    } catch {
+      await page.close();
+      return { ...base, status: 'error' };
+    }
+
+    if ((response?.status() || 0) === 404) {
+      await page.close();
+      return { ...base, reachable: false, status: 'not-found' };
+    }
+
+    await page.waitForTimeout(2000);
+
+    // Detect login walls
+    const title = await page.title();
+    const bodySnippet = await page.$eval('body', el => el.innerText.slice(0, 600)).catch(() => '');
+    if (/log in|sign in|create account|join now/i.test(title + ' ' + bodySnippet)) {
+      await page.close();
+      return { ...base, reachable: true, status: 'login-required' };
+    }
+
+    let websiteInBio: string | null = null;
+
+    if (link.platform === 'Instagram') {
+      // Instagram wraps external links through l.instagram.com
+      const extHref = await page.$eval(
+        'a[href*="l.instagram.com/l.php"], a[href*="linktr.ee"], a[href*="bio.link"]',
+        (el: Element) => (el as HTMLAnchorElement).href
+      ).catch(() => null);
+      if (extHref) {
+        const m = extHref.match(/[?&]u=([^&]+)/);
+        websiteInBio = m ? decodeURIComponent(m[1]) : extHref;
+      }
+    } else if (link.platform === 'Facebook') {
+      // Facebook wraps external links through l.facebook.com
+      const extHref = await page.$eval(
+        'a[href*="l.facebook.com/l.php"]',
+        (el: Element) => (el as HTMLAnchorElement).href
+      ).catch(() => null);
+      if (extHref) {
+        const m = extHref.match(/[?&]u=([^&]+)/);
+        websiteInBio = m ? decodeURIComponent(m[1]) : extHref;
+      }
+    } else if (link.platform === 'Twitter/X') {
+      // Twitter profile website in meta description or visible link
+      const metaContent = await page.$eval(
+        'meta[name="description"], meta[property="og:description"]',
+        (el: Element) => (el as HTMLMetaElement).content
+      ).catch(() => '');
+      const m = metaContent.match(/https?:\/\/[^\s,)"]+/);
+      if (m) websiteInBio = m[0];
+    } else if (link.platform === 'LinkedIn') {
+      websiteInBio = await page.$eval(
+        '[data-field="website"] a',
+        (el: Element) => (el as HTMLAnchorElement).href
+      ).catch(() => null);
+    } else if (link.platform === 'YouTube') {
+      // YouTube channel About section
+      websiteInBio = await page.$eval(
+        'a[href*="redirect?q="]',
+        (el: Element) => {
+          const href = (el as HTMLAnchorElement).href;
+          const m = href.match(/redirect\?q=([^&]+)/);
+          return m ? decodeURIComponent(m[1]) : href;
+        }
+      ).catch(() => null);
+    }
+
+    const matchesDomain = websiteInBio
+      ? websiteInBio.toLowerCase().includes(hostname.toLowerCase())
+      : null;
+
+    await page.close();
+    return { ...base, reachable: true, websiteInBio, matchesDomain, status: 'ok' };
+  } catch (e) {
+    console.error(`[broad-traffic/social/${link.platform}]`, (e as Error).message);
+    return base;
+  }
+}
+
+async function checkSocialProfiles(links: SocialLink[], hostname: string): Promise<SocialProfileCheck[]> {
+  if (links.length === 0) return [];
+
+  let browser: Browser | undefined;
+  const results: SocialProfileCheck[] = [];
+  try {
+    browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+    for (const link of links) {
+      results.push(await checkSingleProfile(browser, link, hostname));
+    }
+  } catch (e) {
+    console.error('[broad-traffic/social]', (e as Error).message);
+  } finally {
+    await browser?.close();
+  }
+  return results;
 }
 
 async function fetchDomainAge(hostname: string): Promise<{ registrationDate: string; ageYears: number } | null> {
@@ -196,20 +327,20 @@ async function fetchPSI(url: string): Promise<PSIData | null> {
   }
 }
 
-export async function runBroadTrafficCapture(url: string) {
+export async function runBroadTrafficCapture(url: string, socialLinks: SocialLink[] = []) {
   const hostname = new URL(url).hostname.replace(/^www\./, '');
 
-  console.log(`[broad-traffic] Starting parallel captures for ${hostname}`);
+  console.log(`[broad-traffic] Starting parallel captures for ${hostname} (${socialLinks.length} social links)`);
 
-  // Run everything in parallel; PSI failure is non-fatal
-  const psiWrapped = await fetchPSI(url)
-    .then(data => ({ data, status: data ? 'done' : 'no-key' }))
-    .catch(e => ({ data: null as PSIData | null, status: e.message as string }));
-
-  const [domainAge, gbp, indexedPages] = await Promise.all([
+  // All captures run in parallel
+  const [psiWrapped, domainAge, gbp, indexedPages, socialChecks] = await Promise.all([
+    fetchPSI(url)
+      .then(data => ({ data, status: data ? 'done' : 'no-key' }))
+      .catch(e => ({ data: null as PSIData | null, status: e.message as string })),
     fetchDomainAge(hostname),
     fetchGBP(hostname),
     fetchIndexCount(hostname),
+    checkSocialProfiles(socialLinks, hostname),
   ]);
 
   const hasGBP = gbp.businessName !== null || gbp.rating !== null;
@@ -221,12 +352,7 @@ export async function runBroadTrafficCapture(url: string) {
     psi: psiWrapped.data,
     indexedPages,
     gbp,
-    social: {
-      hasSpanishPage: false,
-      facebookFollowers: null,
-      instagramFollowers: null,
-      lastPostDays: null,
-    },
+    socialChecks,
     competitor: {
       theyWin: false,
       competitorUrl: null,
@@ -237,7 +363,7 @@ export async function runBroadTrafficCapture(url: string) {
       psi: psiWrapped.status,
       indexedPages: indexedPages !== null ? 'done' : 'error',
       gbp: hasGBP ? 'done' : 'error',
-      social: 'pending',
+      social: socialChecks.length > 0 ? 'done' : 'no-links',
       competitor: 'pending',
     },
   };

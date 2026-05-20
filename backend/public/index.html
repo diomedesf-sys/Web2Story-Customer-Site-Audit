@@ -2615,15 +2615,60 @@
     clearGrid("broad-traffic-social-data");
     const grid = document.getElementById("broad-traffic-social-data");
     if (!grid) return;
+    const bt = captureData('broad-traffic');
     const crawl = captureData('crawl');
-    const socialLinks = crawl?.detectedSocialLinks || [];
-    if (socialLinks.length) {
+
+    // If Public Pulse ran and has social checks, show those (richer data)
+    const checks = bt?.socialChecks;
+    if (checks && checks.length > 0) {
       const card = document.createElement("div"); card.className = "data-card";
-      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:12px">Detected social profiles (from crawl)</div>` +
-        socialLinks.map(s => `<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)"><div style="color:var(--muted);font-size:13px">${s.platform}</div><a href="${s.url}" target="_blank" style="font-family:var(--mono);font-size:12px;color:var(--accent)">${s.url}</a></div>`).join('');
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:16px">Social Profile Checks</div>` +
+        checks.map(c => {
+          const statusIcon = c.status === 'not-found' ? '× Not found'
+            : c.status === 'error' ? '— Could not load'
+            : c.status === 'login-required' ? '🔒 Login required'
+            : '✓ Reachable';
+          const statusColor = c.status === 'not-found' ? 'var(--bad)'
+            : c.status === 'error' ? 'var(--muted)'
+            : c.status === 'login-required' ? '#f59e0b'
+            : 'var(--good)';
+          let websiteRow = '';
+          if (c.websiteInBio) {
+            const matchColor = c.matchesDomain ? 'var(--good)' : 'var(--bad)';
+            const matchLabel = c.matchesDomain ? '✓ Matches domain' : '× Wrong site';
+            websiteRow = `<div style="margin-top:6px;font-size:12px">Website in bio: <a href="${c.websiteInBio}" target="_blank" style="color:var(--accent)">${c.websiteInBio}</a> <span style="color:${matchColor};margin-left:8px">${matchLabel}</span></div>`;
+          } else if (c.status === 'ok') {
+            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">No website link found in bio</div>`;
+          } else if (c.status === 'login-required') {
+            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">Website bio not readable — <a href="${c.profileUrl}" target="_blank" style="color:var(--accent)">verify manually →</a></div>`;
+          }
+          return `<div style="padding:10px 0;border-bottom:1px dashed var(--line)">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-weight:600;color:var(--ink);font-size:13px;min-width:90px">${c.platform}</span>
+              <span style="font-size:12px;color:${statusColor}">${statusIcon}</span>
+              <a href="${c.profileUrl}" target="_blank" class="btn ghost sm" style="margin-left:auto">Open →</a>
+            </div>
+            ${websiteRow}
+          </div>`;
+        }).join('');
+      grid.appendChild(card);
+      return;
+    }
+
+    // Fall back to crawl-detected links with manual check buttons
+    const crawlLinks = crawl?.detectedSocialLinks || [];
+    if (crawlLinks.length) {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Social profiles detected on site</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Run Public Pulse to check if website bio links back to this domain.</div>` +
+        crawlLinks.map(s => `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)">
+          <span style="font-weight:600;font-size:13px;color:var(--ink);min-width:90px">${s.platform}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis">${s.url}</span>
+          <a href="${s.url}" target="_blank" class="btn ghost sm">Open →</a>
+        </div>`).join('');
       grid.appendChild(card);
     } else {
-      renderEmptyState("broad-traffic-social-data", crawl ? "No social profile links detected on the crawled pages." : "Run Site Crawler first to detect social links.");
+      renderEmptyState("broad-traffic-social-data", crawl ? "No social profile links detected on the crawled pages." : "Run Site Crawler first — social links are detected from the crawl.");
     }
   }
 

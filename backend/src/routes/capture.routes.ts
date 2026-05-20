@@ -1,10 +1,25 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs/promises';
+import path from 'path';
 import { runLighthouseAudit } from '../services/lighthouse.service';
 import crawlSite from '../services/crawler.service';
 import { getGA4Data } from '../services/ga4.service';
 import { getGSCData } from '../services/gsc.service';
 import { runBroadTrafficCapture } from '../services/broad-traffic.service';
 import { saveCapture, hostnameFromUrl } from '../services/workspace.service';
+
+async function loadLatestCrawlSocialLinks(hostname: string): Promise<Array<{ platform: string; url: string }>> {
+  try {
+    const crawlDir = path.join(process.cwd(), 'reports', hostname, 'crawl');
+    const files = (await fs.readdir(crawlDir)).filter(f => f.endsWith('.json')).sort().reverse();
+    if (files.length === 0) return [];
+    const raw = await fs.readFile(path.join(crawlDir, files[0]), 'utf-8');
+    const crawl = JSON.parse(raw);
+    return crawl.detectedSocialLinks || [];
+  } catch {
+    return [];
+  }
+}
 
 const router = Router();
 
@@ -57,7 +72,8 @@ router.post('/broad-traffic', async (req: Request, res: Response) => {
     const hostname = hostnameFromUrl(url);
     console.log(`[capture/broad-traffic] Running for ${hostname}`);
 
-    const data = await runBroadTrafficCapture(url);
+    const socialLinks = await loadLatestCrawlSocialLinks(hostname);
+    const data = await runBroadTrafficCapture(url, socialLinks);
     const savedPath = await saveCapture(hostname, 'broad-traffic', data);
 
     res.json({ success: true, hostname, path: savedPath, data });
