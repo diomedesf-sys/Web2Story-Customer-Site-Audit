@@ -295,7 +295,7 @@ export async function crawlSite(
       pageData.consoleErrors = consoleErrors;
       pageData.pageWeightBytes = pageWeightBytes;
       allPages.push(pageData);
-      allImages.push(...pageData.images);
+      allImages.push(...pageData.images.map(img => ({ ...img, foundOn: url })));
 
       if (screenshotKeyPages && (depth === 0 || isServicePage(url) || isContactPage(url))) {
         await takeScreenshot(url);

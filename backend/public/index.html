@@ -1764,8 +1764,16 @@
 
   function transformLighthouseOpportunities(lhr) {
     if (!lhr?.audits) return [];
-    const opIds = ['unused-javascript', 'unused-css-rules', 'render-blocking-resources', 'uses-responsive-images',
-                   'offscreen-images', 'uses-webp-images', 'uses-optimized-images', 'unminified-css', 'unminified-javascript'];
+    // Use all performance auditRefs instead of a hardcoded list
+    const perfRefs = lhr.categories?.performance?.auditRefs || [];
+    const opIds = perfRefs
+      .filter(ref => {
+        const a = lhr.audits[ref.id];
+        return a && a.score !== null && a.score < 1 &&
+               a.details?.type === 'opportunity' &&
+               (a.details?.overallSavingsBytes > 0 || a.details?.overallSavingsMs > 0);
+      })
+      .map(ref => ref.id);
     return opIds.filter(id => {
       const a = lhr.audits[id];
       return a && a.score !== null && a.score < 1;
@@ -1878,6 +1886,7 @@
         missingAltCount: p.missingAltCount || 0,
         ogTitle: p.ogTags?.title || '',
         ogImage: p.ogTags?.image || '',
+        ogDesc: p.ogTags?.description || '',
         twitterCard: p.ogTags?.twitterCard || '',
         hreflangCount: p.hreflangTags?.length || 0,
         colorPalette: p.colorPalette || {},
@@ -2174,7 +2183,8 @@
     const toRender = r => ({
       priority: r.impact === 'high' ? 'high' : r.impact === 'medium' ? 'med' : 'low',
       action: r.action, source: r.source, impact: impMap[r.impact] || r.impact,
-      effort: impMap[r.effort] || r.effort, notes: r.notes || '', id: r.id, included: r.included
+      effort: impMap[r.effort] || r.effort, notes: r.notes || '', id: r.id, included: r.included,
+      evidence: r.evidence || ''
     });
     const isQuickWin = r => ['high','medium'].includes(r.impact) && r.effort === 'low';
     const quickwins = recs.filter(isQuickWin).map(toRender);
@@ -2420,6 +2430,10 @@
       } else {
         statBlock = `<div class="stat"><span class="v">${s.stat}</span></div>`;
       }
+      const toolKey = t.id === 'crawler' ? 'crawl' : t.id;
+      const slot = STATE.workspace?.captures?.[toolKey];
+      const ts = slot?.latest?.data?.timestamp || slot?.latest?.timestamp || null;
+      const tsLabel = ts ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">Last run: ${ts.replace('T',' ').slice(0,16)}</div>` : '';
       const runButton = isEditor ? '' : `<button class="btn primary sm" data-run="${t.id}" onclick="runTool('${t.id}', event)" style="margin-right:8px">Run</button>`;
       card.innerHTML = `
         <div class="top">
@@ -2427,7 +2441,7 @@
           ${statusBadge}
         </div>
         <div class="foot">
-          ${statBlock}
+          <div>${statBlock}${tsLabel}</div>
           ${runButton}
           <span class="arrow">→</span>
         </div>
@@ -2805,6 +2819,7 @@
 
           ${groupHeader('Social')}
           ${row('OG title', p.ogTitle || `<span style="color:var(--bad)">Missing</span>`)}
+          ${row('OG description', p.ogDesc || `<span style="color:var(--bad)">Missing</span>`)}
           ${row('OG image', p.ogImage || `<span style="color:var(--bad)">Missing</span>`)}
           ${row('Twitter card', p.twitterCard || `<span style="color:var(--muted)">None</span>`)}
 
@@ -3145,6 +3160,7 @@
       if (gbp.address) metricCard("Address", gbp.address, '', null);
       if (gbp.phone) metricCard("Phone", gbp.phone, '', null);
       metricCard("Photos", gbp.hasPhotos ? '✓ Has photos' : '× No photos detected', '', gbp.hasPhotos ? 'var(--good)' : 'var(--muted)');
+      metricCard("Posts", gbp.hasPosts ? '✓ Has posts' : '× No posts detected', '', gbp.hasPosts ? 'var(--good)' : 'var(--muted)');
     } else {
       const pending = document.createElement("div"); pending.className = "data-card";
       pending.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${bt ? 'GBP data could not be scraped — business may not appear in Google Maps for this domain.' : 'Run Public Pulse to capture GBP data automatically.'}</div>`;
@@ -3210,6 +3226,16 @@
     }
     if (crawl?.robotsTxt) {
       metricCard("robots.txt", crawl.robotsTxt.exists ? "✓ Found" : "× Missing", crawl.robotsTxt.exists ? `${crawl.robotsTxt.blockedPaths?.length || 0} disallow rule(s)` : '', !crawl.robotsTxt.exists);
+      if (crawl.robotsTxt.raw) {
+        const rawCard = document.createElement("div"); rawCard.className = "data-card";
+        rawCard.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">robots.txt — raw content</div>
+            <button onclick="this.closest('.data-card').querySelector('pre').style.display=this.closest('.data-card').querySelector('pre').style.display==='none'?'block':'none'" style="font-size:11px;background:none;border:1px solid var(--line);color:var(--muted);padding:2px 8px;border-radius:4px;cursor:pointer">toggle</button>
+          </div>
+          <pre style="display:none;font-size:11px;font-family:monospace;color:var(--ink-2);white-space:pre-wrap;word-break:break-all;background:var(--surface);padding:10px;border-radius:4px;max-height:300px;overflow-y:auto">${crawl.robotsTxt.raw.replace(/</g,'&lt;')}</pre>`;
+        grid.appendChild(rawCard);
+      }
     }
     if (crawl?.sitemap) {
       metricCard("Sitemap", crawl.sitemap.found ? "✓ Found" : "× Missing", crawl.sitemap.found ? `${crawl.sitemap.urlCount} URLs · ${crawl.sitemap.orphanedUrls?.length || 0} orphaned` : '', !crawl.sitemap.found);
@@ -3239,24 +3265,28 @@
     clearGrid("broad-traffic-competitor-data");
     const grid = document.getElementById("broad-traffic-competitor-data");
     if (!grid) return;
-    const items = [
-      { metric: "Domain", us: "taliscpas.com", them: "northhudsoncpa.com", winner: null },
-      { metric: "Est. monthly visits", us: "1,240", them: "3,800", winner: "them" },
-      { metric: "Lighthouse score", us: "43", them: "81", winner: "them" },
-      { metric: "Spanish page", us: "× No", them: "✓ Yes", winner: "them" },
-      { metric: "Reviews", us: "187", them: "94", winner: "us" },
-      { metric: "Ads running", us: "× No", them: "✓ Yes (Google)", winner: "them" }
-    ];
-    const header = document.createElement("div"); header.className = "data-card";
-    header.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600"><div>Metric</div><div style="text-align:right">You</div><div style="text-align:right">Top competitor</div></div>`;
-    grid.appendChild(header);
-    items.forEach(m => {
+    const bt = captureData('broad-traffic');
+    const comp = bt?.competitor;
+
+    if (!comp?.competitorUrl) {
       const card = document.createElement("div"); card.className = "data-card";
-      const usColor = m.winner === 'us' ? 'var(--good)' : m.winner === 'them' ? 'var(--ink-2)' : 'var(--ink-2)';
-      const themColor = m.winner === 'them' ? 'var(--good)' : 'var(--ink-2)';
-      card.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center"><div style="color:var(--ink-2)">${m.metric}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${usColor}">${m.us}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${themColor}">${m.them}</div></div>`;
+      card.innerHTML = `<div style="color:var(--muted);font-size:13px">Competitor capture not yet implemented — run Public Pulse to populate when available.</div>`;
       grid.appendChild(card);
-    });
+      return;
+    }
+
+    const row = (metric, us, them, winner) => {
+      const c = document.createElement("div"); c.className = "data-card";
+      const usColor = winner === 'us' ? 'var(--good)' : 'var(--ink-2)';
+      const themColor = winner === 'them' ? 'var(--good)' : 'var(--ink-2)';
+      c.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center"><div style="color:var(--ink-2)">${metric}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${usColor}">${us}</div><div style="text-align:right;font-family:var(--mono);font-weight:700;color:${themColor}">${them}</div></div>`;
+      grid.appendChild(c);
+    };
+    const header = document.createElement("div"); header.className = "data-card";
+    header.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600"><div>Metric</div><div style="text-align:right">You</div><div style="text-align:right">Competitor</div></div>`;
+    grid.appendChild(header);
+    row("Domain", bt.hostname || STATE.hostname, comp.competitorUrl, null);
+    if (comp.competitorScore != null) row("Lighthouse score", Math.round((bt?.psi?.performanceScore ?? 0)) || '—', comp.competitorScore, comp.theyWin ? 'them' : 'us');
   }
 
   /* ═══════════════════════════════════════════════════════
@@ -3564,6 +3594,47 @@
       note.innerHTML = `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Detection Caveats</div>${limitations.map(l => `<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:4px">⚠ ${l}</div>`).join('')}`;
       grid.appendChild(note);
     }
+
+    // Content parity table
+    const parity = bi.parity || [];
+    if (parity.length) {
+      const h = document.createElement("div");
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px';
+      h.textContent = 'Content Parity — EN vs ES word counts';
+      grid.appendChild(h);
+      parity.forEach(p => {
+        const pct = p.parityPercent ?? 0;
+        const color = pct >= 80 ? 'var(--good)' : pct >= 50 ? 'var(--warn)' : 'var(--bad)';
+        const c = document.createElement("div"); c.className = "data-card";
+        c.innerHTML = `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 80px;gap:12px;align-items:center">
+          <div style="font-family:monospace;font-size:12px;color:var(--accent)">${p.englishUrl}</div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">EN words</div><div style="font-weight:700">${(p.englishWordCount||0).toLocaleString()}</div></div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">ES words</div><div style="font-weight:700">${(p.spanishWordCount||0).toLocaleString()}</div></div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">Parity</div><div style="font-weight:700;color:${color}">${pct}%</div></div>
+        </div>`;
+        grid.appendChild(c);
+      });
+    }
+
+    // Spanish readability
+    const spReadability = bi.spanishReadability || [];
+    if (spReadability.length) {
+      const h = document.createElement("div");
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px';
+      h.textContent = 'Spanish Page Readability';
+      grid.appendChild(h);
+      spReadability.forEach(p => {
+        const color = p.easeScore >= 60 ? 'var(--good)' : p.easeScore >= 30 ? 'var(--warn)' : 'var(--bad)';
+        const c = document.createElement("div"); c.className = "data-card";
+        c.innerHTML = `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;align-items:center">
+          <div style="font-family:monospace;font-size:12px;color:var(--accent)">${p.url}</div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">Flesch</div><div style="font-weight:700;color:${color}">${p.easeScore}</div></div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">Grade</div><div style="font-weight:700">${p.gradeLevel}</div></div>
+          <div style="text-align:right"><div style="font-size:10px;color:var(--muted)">Voice Ready</div><div style="font-weight:700;color:${p.isVoiceReady ? 'var(--good)' : 'var(--muted)'}">${p.isVoiceReady ? '✓' : '×'}</div></div>
+        </div>`;
+        grid.appendChild(c);
+      });
+    }
   }
 
   function renderBilingualGaps() {
@@ -3612,6 +3683,22 @@
       note.innerHTML = `<div style="color:var(--muted);font-size:12px"><strong>Note:</strong> ${bi.limitations[0]}</div>`;
       grid.appendChild(note);
     }
+
+    // Sitemap-level hreflang entries
+    const crawl = captureData('crawl');
+    const sitemapHreflang = crawl?.sitemap?.hreflangEntries || [];
+    if (sitemapHreflang.length) {
+      const h = document.createElement("div");
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px';
+      h.textContent = `Sitemap-level hreflang — ${sitemapHreflang.length} entries`;
+      grid.appendChild(h);
+      sitemapHreflang.forEach(e => {
+        const c = document.createElement("div"); c.className = "data-card";
+        c.innerHTML = `<div style="font-family:monospace;font-size:12px;color:var(--accent);margin-bottom:6px">${e.url || e.loc || JSON.stringify(e)}</div>
+          ${e.alternates ? e.alternates.map(a => `<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--surface);border:1px solid var(--line);margin:2px;display:inline-block"><strong>${a.hreflang}</strong> → ${a.href}</span>`).join('') : ''}`;
+        grid.appendChild(c);
+      });
+    }
   }
 
   function renderRecommendationCards(data, gridId) {
@@ -3631,6 +3718,7 @@
         <div>
           <div class="action">${r.action}</div>
           <div class="source">Source: ${r.source}</div>
+          ${r.evidence ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic">${r.evidence}</div>` : ''}
           <div class="notes-area">
             <div class="edit-label">Operator notes</div>
             <textarea class="edit-field" data-rec-id="${r.id}" placeholder="Add notes, deadlines, or context…">${r.notes}</textarea>
