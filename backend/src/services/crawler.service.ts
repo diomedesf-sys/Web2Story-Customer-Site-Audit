@@ -241,13 +241,16 @@ export async function crawlSite(
   const screenshottedUrls = new Set<string>();
   const screenshotPaths: string[] = [];
 
+  const screenshotHostname = new URL(baseUrl).hostname;
+
   async function takeScreenshot(targetUrl: string) {
     const pathname = new URL(targetUrl).pathname;
     const slug = pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
-    const screenshotPath = path.join(screenshotsDir, `screenshot-${slug}.png`);
+    const filename = `screenshot-${slug}.png`;
+    const screenshotPath = path.join(screenshotsDir, filename);
     await page.screenshot({ path: screenshotPath, fullPage: true });
     screenshottedUrls.add(targetUrl);
-    screenshotPaths.push(screenshotPath);
+    screenshotPaths.push(`/reports/${screenshotHostname}/screenshots/${filename}`);
   }
 
   function isServicePage(url: string): boolean {
@@ -370,7 +373,7 @@ export async function crawlSite(
       await mobilePage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
       const mobilePath = path.join(screenshotsDir, 'screenshot-home-mobile.png');
       await mobilePage.screenshot({ path: mobilePath, fullPage: true });
-      screenshotPaths.push(mobilePath);
+      screenshotPaths.push(`/reports/${screenshotHostname}/screenshots/screenshot-home-mobile.png`);
       await mobileContext.close();
     } catch (e) {
       console.error('[crawler] Mobile screenshot failed:', e);
