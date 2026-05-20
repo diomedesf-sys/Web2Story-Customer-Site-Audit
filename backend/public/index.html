@@ -3346,7 +3346,7 @@
 
   const PACKAGES = [
     { id: "page-builder", name: "Page Builder Package", desc: "What the page builder needs to redesign the site", files: ["crawl.json", "recommendations.json", "narrative-en.md", "narrative-es.md"] },
-    { id: "presentation", name: "Presentation Package", desc: "For the prospect-facing conversation", files: ["narrative-en.md", "narrative-es.md", "lighthouse-summary.md", "deep-traffic-summary.md", "screenshots/*.png"] },
+    { id: "presentation", name: "Presentation Package", desc: "For the prospect-facing conversation", files: ["narrative-en.md", "narrative-es.md", "recommendations-annotated.md", "lighthouse.json", "screenshots/*.png"] },
     { id: "full-dump", name: "Full Dump", desc: "Everything in reports/{hostname}/ for archiving", files: ["all-artifacts"] }
   ];
 
@@ -3404,14 +3404,6 @@
         `;
         card.addEventListener("click", () => {
           if (a.href) { window.open(a.href, '_blank'); return; }
-          if (a.download) {
-            const blob = new Blob([a.download.content], { type: 'text/markdown' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url; link.download = a.download.filename;
-            link.click(); URL.revokeObjectURL(url);
-            return;
-          }
           EDITS_STATE.selectedFile = a;
           goto("edits-editor");
         });
@@ -3456,7 +3448,9 @@
     }
     fnameEl.textContent = file.filename;
     metaEl.textContent = `${file.type.toUpperCase()} • ${file.size} • ${file.tool} • Last modified ${file.modified}${file.edited ? ' • edited' : ''}`;
-    const raw = file.data ? JSON.stringify(file.data, null, 2) : `// ${file.filename}\n// (no data captured yet)`;
+    const raw = file.type === 'md'
+      ? (file.download?.content || '')
+      : (file.data ? JSON.stringify(file.data, null, 2) : `// ${file.filename}\n// (no data captured yet)`);
     srcEl.value = raw;
     renderPreview(raw, file.type, previewEl);
     // Live preview on input
@@ -3468,7 +3462,9 @@
     if (!file) return;
     const srcEl = document.getElementById('editor-source');
     const previewEl = document.getElementById('editor-preview');
-    const raw = file.data ? JSON.stringify(file.data, null, 2) : '';
+    const raw = file.type === 'md'
+      ? (file.download?.content || '')
+      : (file.data ? JSON.stringify(file.data, null, 2) : '');
     srcEl.value = raw;
     renderPreview(raw, file.type, previewEl);
     showToast('Reset to last saved');
