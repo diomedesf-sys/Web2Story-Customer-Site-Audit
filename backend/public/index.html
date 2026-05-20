@@ -3421,7 +3421,7 @@
         card.innerHTML = `
           <h4>${p.name}</h4>
           <p class="desc">${p.desc}</p>
-          <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted)">${p.files.length} file${p.files.length>1?'s':''}</div>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted)">${(() => { const n = p.id === 'full-dump' ? getArtifacts().length + 1 : p.files.length; return `${n} file${n !== 1 ? 's' : ''}`; })()}</div>
           <span class="arrow">→</span>
         `;
         card.addEventListener("click", () => {
