@@ -6,20 +6,8 @@ import crawlSite from '../services/crawler.service';
 import { getGA4Data } from '../services/ga4.service';
 import { getGSCData } from '../services/gsc.service';
 import { runBroadTrafficCapture } from '../services/broad-traffic.service';
+import { checkSocialProfiles } from '../services/broad-traffic.service';
 import { saveCapture, hostnameFromUrl } from '../services/workspace.service';
-
-async function loadLatestCrawlSocialLinks(hostname: string): Promise<Array<{ platform: string; url: string }>> {
-  try {
-    const crawlDir = path.join(process.cwd(), 'reports', hostname, 'crawl');
-    const files = (await fs.readdir(crawlDir)).filter(f => f.endsWith('.json')).sort().reverse();
-    if (files.length === 0) return [];
-    const raw = await fs.readFile(path.join(crawlDir, files[0]), 'utf-8');
-    const crawl = JSON.parse(raw);
-    return crawl.detectedSocialLinks || [];
-  } catch {
-    return [];
-  }
-}
 
 const router = Router();
 
@@ -49,14 +37,18 @@ router.post('/crawl', async (req: Request, res: Response) => {
     const hostname = hostnameFromUrl(url);
     console.log(`[capture/crawl] Running for ${hostname}`);
 
-    const data = await crawlSite(url, {
+    const crawlData = await crawlSite(url, {
       maxPages: maxPages ?? 60,
       maxDepth: maxDepth ?? 3,
       downloadImages: downloadImages ?? false,
       screenshotKeyPages: true,
     });
-    const savedPath = await saveCapture(hostname, 'crawl', data);
 
+    // Run social profile bio check on links found during crawl
+    const socialChecks = await checkSocialProfiles(crawlData.detectedSocialLinks || [], hostname);
+    const data = { ...crawlData, socialChecks };
+
+    const savedPath = await saveCapture(hostname, 'crawl', data);
     res.json({ success: true, hostname, path: savedPath, data });
   } catch (error: any) {
     console.error('[capture/crawl] Error:', error.message);
@@ -72,8 +64,7 @@ router.post('/broad-traffic', async (req: Request, res: Response) => {
     const hostname = hostnameFromUrl(url);
     console.log(`[capture/broad-traffic] Running for ${hostname}`);
 
-    const socialLinks = await loadLatestCrawlSocialLinks(hostname);
-    const data = await runBroadTrafficCapture(url, socialLinks);
+    const data = await runBroadTrafficCapture(url);
     const savedPath = await saveCapture(hostname, 'broad-traffic', data);
 
     res.json({ success: true, hostname, path: savedPath, data });

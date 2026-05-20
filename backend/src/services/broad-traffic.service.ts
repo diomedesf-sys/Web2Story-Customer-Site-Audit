@@ -144,7 +144,7 @@ async function checkSingleProfile(
   }
 }
 
-async function checkSocialProfiles(links: SocialLink[], hostname: string): Promise<SocialProfileCheck[]> {
+export async function checkSocialProfiles(links: SocialLink[], hostname: string): Promise<SocialProfileCheck[]> {
   if (links.length === 0) return [];
 
   let browser: Browser | undefined;
@@ -327,20 +327,19 @@ async function fetchPSI(url: string): Promise<PSIData | null> {
   }
 }
 
-export async function runBroadTrafficCapture(url: string, socialLinks: SocialLink[] = []) {
+export async function runBroadTrafficCapture(url: string) {
   const hostname = new URL(url).hostname.replace(/^www\./, '');
 
-  console.log(`[broad-traffic] Starting parallel captures for ${hostname} (${socialLinks.length} social links)`);
+  console.log(`[broad-traffic] Starting parallel captures for ${hostname}`);
 
   // All captures run in parallel
-  const [psiWrapped, domainAge, gbp, indexedPages, socialChecks] = await Promise.all([
+  const [psiWrapped, domainAge, gbp, indexedPages] = await Promise.all([
     fetchPSI(url)
       .then(data => ({ data, status: data ? 'done' : 'no-key' }))
       .catch(e => ({ data: null as PSIData | null, status: e.message as string })),
     fetchDomainAge(hostname),
     fetchGBP(hostname),
     fetchIndexCount(hostname),
-    checkSocialProfiles(socialLinks, hostname),
   ]);
 
   const hasGBP = gbp.businessName !== null || gbp.rating !== null;
@@ -352,7 +351,6 @@ export async function runBroadTrafficCapture(url: string, socialLinks: SocialLin
     psi: psiWrapped.data,
     indexedPages,
     gbp,
-    socialChecks,
     competitor: {
       theyWin: false,
       competitorUrl: null,
@@ -363,7 +361,7 @@ export async function runBroadTrafficCapture(url: string, socialLinks: SocialLin
       psi: psiWrapped.status,
       indexedPages: indexedPages !== null ? 'done' : 'error',
       gbp: hasGBP ? 'done' : 'error',
-      social: socialChecks.length > 0 ? 'done' : 'no-links',
+      social: 'see-crawler',
       competitor: 'pending',
     },
   };

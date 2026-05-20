@@ -1133,6 +1133,14 @@
     </div>
   </div>
 
+  <div class="view" id="view-crawler-social">
+    <div class="data-view">
+      <h2>Social Profiles</h2>
+      <p class="lede">Social accounts detected on this site — and whether their bio links back to the right domain.</p>
+      <div class="data-cards" id="crawler-social-data"></div>
+    </div>
+  </div>
+
   <!-- ============================ LAYER 2: PUBLIC PULSE SECTIONS ============================ -->
   <div class="view" id="view-broad-traffic-hub">
     <div class="section-hub">
@@ -2002,7 +2010,8 @@
     { id: "images", name: "Image Inventory", desc: "Images, alt text, lazy-load status" },
     { id: "schema", name: "Schema & AEO", desc: "Schema coverage & AEO readiness" },
     { id: "readability", name: "Readability", desc: "Flesch scores & voice readiness" },
-    { id: "screenshots", name: "Screenshots", desc: "Captured page renders" }
+    { id: "screenshots", name: "Screenshots", desc: "Captured page renders" },
+    { id: "social", name: "Social Profiles", desc: "Detected profiles & website bio check" }
   ];
   const BROAD_TRAFFIC_SECTIONS = [
     { id: "overview", name: "Traffic Overview", desc: "Estimated monthly visits, sources, bounce rate" },
@@ -2528,6 +2537,57 @@
   /* ═══════════════════════════════════════════════════════
      PUBLIC PULSE (broad-traffic) — real data
      ═══════════════════════════════════════════════════════ */
+  function renderCrawlerSocial() {
+    clearGrid("crawler-social-data");
+    const grid = document.getElementById("crawler-social-data");
+    if (!grid) return;
+    const crawl = captureData('crawl');
+    if (!crawl) return renderEmptyState("crawler-social-data", "Run Site Crawler first.");
+
+    const checks = crawl.socialChecks;
+    const rawLinks = crawl.detectedSocialLinks || [];
+
+    if (!rawLinks.length) {
+      return renderEmptyState("crawler-social-data", "No social profile links detected on the crawled pages.");
+    }
+
+    if (checks && checks.length > 0) {
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:16px">Social Profile Bio Check</div>` +
+        checks.map(c => {
+          const statusColor = c.status === 'not-found' ? 'var(--bad)' : c.status === 'error' ? 'var(--muted)' : c.status === 'login-required' ? '#f59e0b' : 'var(--good)';
+          const statusLabel = c.status === 'not-found' ? '× Not found' : c.status === 'error' ? '— Could not load' : c.status === 'login-required' ? '🔒 Login required' : '✓ Reachable';
+          let websiteRow = '';
+          if (c.websiteInBio) {
+            const matchColor = c.matchesDomain ? 'var(--good)' : 'var(--bad)';
+            websiteRow = `<div style="margin-top:6px;font-size:12px">Website in bio: <a href="${c.websiteInBio}" target="_blank" style="color:var(--accent)">${c.websiteInBio}</a> <span style="color:${matchColor};margin-left:8px">${c.matchesDomain ? '✓ Matches domain' : '× Wrong site'}</span></div>`;
+          } else if (c.status === 'ok') {
+            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">No website link found in bio</div>`;
+          } else if (c.status === 'login-required') {
+            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">Website bio not readable — <a href="${c.profileUrl}" target="_blank" style="color:var(--accent)">verify manually →</a></div>`;
+          }
+          return `<div style="padding:10px 0;border-bottom:1px dashed var(--line)">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font-weight:600;color:var(--ink);font-size:13px;min-width:90px">${c.platform}</span>
+              <span style="font-size:12px;color:${statusColor}">${statusLabel}</span>
+              <a href="${c.profileUrl}" target="_blank" class="btn ghost sm" style="margin-left:auto">Open →</a>
+            </div>${websiteRow}</div>`;
+        }).join('');
+      grid.appendChild(card);
+    } else {
+      // Crawl ran but social check hasn't — show raw links with re-run prompt
+      const card = document.createElement("div"); card.className = "data-card";
+      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Social profiles found on site</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Re-run Site Crawler to check whether each profile's bio links back to this domain.</div>` +
+        rawLinks.map(s => `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)">
+          <span style="font-weight:600;font-size:13px;color:var(--ink);min-width:90px">${s.platform}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis">${s.url}</span>
+          <a href="${s.url}" target="_blank" class="btn ghost sm">Open →</a>
+        </div>`).join('');
+      grid.appendChild(card);
+    }
+  }
+
   function renderBroadTrafficOverview() {
     clearGrid("broad-traffic-overview-data");
     const grid = document.getElementById("broad-traffic-overview-data");
@@ -2659,61 +2719,12 @@
     clearGrid("broad-traffic-social-data");
     const grid = document.getElementById("broad-traffic-social-data");
     if (!grid) return;
-    const bt = captureData('broad-traffic');
-    const crawl = captureData('crawl');
-
-    // If Public Pulse ran and has social checks, show those (richer data)
-    const checks = bt?.socialChecks;
-    if (checks && checks.length > 0) {
-      const card = document.createElement("div"); card.className = "data-card";
-      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:16px">Social Profile Checks</div>` +
-        checks.map(c => {
-          const statusIcon = c.status === 'not-found' ? '× Not found'
-            : c.status === 'error' ? '— Could not load'
-            : c.status === 'login-required' ? '🔒 Login required'
-            : '✓ Reachable';
-          const statusColor = c.status === 'not-found' ? 'var(--bad)'
-            : c.status === 'error' ? 'var(--muted)'
-            : c.status === 'login-required' ? '#f59e0b'
-            : 'var(--good)';
-          let websiteRow = '';
-          if (c.websiteInBio) {
-            const matchColor = c.matchesDomain ? 'var(--good)' : 'var(--bad)';
-            const matchLabel = c.matchesDomain ? '✓ Matches domain' : '× Wrong site';
-            websiteRow = `<div style="margin-top:6px;font-size:12px">Website in bio: <a href="${c.websiteInBio}" target="_blank" style="color:var(--accent)">${c.websiteInBio}</a> <span style="color:${matchColor};margin-left:8px">${matchLabel}</span></div>`;
-          } else if (c.status === 'ok') {
-            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">No website link found in bio</div>`;
-          } else if (c.status === 'login-required') {
-            websiteRow = `<div style="margin-top:6px;font-size:12px;color:var(--muted)">Website bio not readable — <a href="${c.profileUrl}" target="_blank" style="color:var(--accent)">verify manually →</a></div>`;
-          }
-          return `<div style="padding:10px 0;border-bottom:1px dashed var(--line)">
-            <div style="display:flex;align-items:center;gap:12px">
-              <span style="font-weight:600;color:var(--ink);font-size:13px;min-width:90px">${c.platform}</span>
-              <span style="font-size:12px;color:${statusColor}">${statusIcon}</span>
-              <a href="${c.profileUrl}" target="_blank" class="btn ghost sm" style="margin-left:auto">Open →</a>
-            </div>
-            ${websiteRow}
-          </div>`;
-        }).join('');
-      grid.appendChild(card);
-      return;
-    }
-
-    // Fall back to crawl-detected links with manual check buttons
-    const crawlLinks = crawl?.detectedSocialLinks || [];
-    if (crawlLinks.length) {
-      const card = document.createElement("div"); card.className = "data-card";
-      card.innerHTML = `<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Social profiles detected on site</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Run Public Pulse to check if website bio links back to this domain.</div>` +
-        crawlLinks.map(s => `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)">
-          <span style="font-weight:600;font-size:13px;color:var(--ink);min-width:90px">${s.platform}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis">${s.url}</span>
-          <a href="${s.url}" target="_blank" class="btn ghost sm">Open →</a>
-        </div>`).join('');
-      grid.appendChild(card);
-    } else {
-      renderEmptyState("broad-traffic-social-data", crawl ? "No social profile links detected on the crawled pages." : "Run Site Crawler first — social links are detected from the crawl.");
-    }
+    const card = document.createElement("div"); card.className = "data-card";
+    card.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:8px">Social Profiles</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Social profile bio checks run as part of the Site Crawler and live there.</div>
+      <button class="btn ghost sm" onclick="goto('crawler-social')">Go to Social Profiles →</button>`;
+    grid.appendChild(card);
   }
 
   function renderBroadTrafficIndex() {
@@ -3244,7 +3255,7 @@
   const VIEWS = [
     "landing",
     "lighthouse-hub", "lighthouse-scores", "lighthouse-vitals", "lighthouse-opportunities", "lighthouse-findings", "lighthouse-stack",
-    "crawler-hub", "crawler-pages", "crawler-broken", "crawler-images", "crawler-schema", "crawler-readability", "crawler-screenshots",
+    "crawler-hub", "crawler-pages", "crawler-broken", "crawler-images", "crawler-schema", "crawler-readability", "crawler-screenshots", "crawler-social",
     "broad-traffic-hub", "broad-traffic-overview", "broad-traffic-gbp", "broad-traffic-ads", "broad-traffic-social", "broad-traffic-index", "broad-traffic-competitor",
     "deep-traffic-hub", "deep-traffic-ga4-summary", "deep-traffic-ga4-pages", "deep-traffic-ga4-devices", "deep-traffic-ga4-flow", "deep-traffic-gsc-summary", "deep-traffic-gsc-almost", "deep-traffic-gsc-lowctr", "deep-traffic-gsc-coverage",
     "bilingual-hub", "bilingual-coverage", "bilingual-gaps", "bilingual-hreflang",
@@ -3268,6 +3279,7 @@
     "crawler-schema": "Workspace / Site Crawler / Schema & AEO",
     "crawler-readability": "Workspace / Site Crawler / Readability",
     "crawler-screenshots": "Workspace / Site Crawler / Screenshots",
+    "crawler-social": "Workspace / Site Crawler / Social Profiles",
     "broad-traffic-hub": "Workspace / Public Pulse",
     "broad-traffic-overview": "Workspace / Public Pulse / Traffic Overview",
     "broad-traffic-gbp": "Workspace / Public Pulse / Google Business Profile",
@@ -3718,6 +3730,7 @@
     renderCrawlerSchema();
     renderCrawlerReadability();
     renderCrawlerScreenshots();
+    renderCrawlerSocial();
     renderSectionCards(BROAD_TRAFFIC_SECTIONS, "broad-traffic-sections", "broad-traffic");
     renderBroadTrafficOverview();
     renderBroadTrafficGBP();
