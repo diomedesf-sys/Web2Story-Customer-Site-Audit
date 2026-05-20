@@ -339,6 +339,8 @@
   .status-pill.done .dot { background: var(--good); }
   .status-pill.failed { background: rgba(239, 68, 68, 0.15); color: var(--bad); }
   .status-pill.failed .dot { background: var(--bad); }
+  .status-pill.warn { background: rgba(234, 179, 8, 0.15); color: var(--warn); }
+  .status-pill.warn .dot { background: var(--warn); }
   @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 
   /* Section hub (Layer 2) */
@@ -1058,6 +1060,15 @@
     </div>
   </div>
 
+  <!-- Accessibility Findings -->
+  <div class="view" id="view-lighthouse-accessibility">
+    <div class="data-view">
+      <h2>Accessibility Findings</h2>
+      <p class="lede">Issues flagged by Lighthouse's accessibility audits — failing items above, passing below.</p>
+      <div class="data-cards" id="lighthouse-accessibility-data"></div>
+    </div>
+  </div>
+
   <!-- Tech Stack -->
   <div class="view" id="view-lighthouse-stack">
     <div class="data-view">
@@ -1587,6 +1598,11 @@
     }
     const slot = STATE.workspace?.captures?.[tool];
     if (!slot?.latest) return { status: 'idle', stat: 'Not run' };
+    if (tool === 'bilingual') {
+      const pct = slot.latest.data?.coverage?.coveragePercent || 0;
+      const status = pct >= 50 ? 'done' : pct > 0 ? 'warn' : 'failed';
+      return { status, stat: toolStat(tool, slot.latest.data) };
+    }
     return { status: 'done', stat: toolStat(tool, slot.latest.data) };
   }
 
@@ -1631,6 +1647,76 @@
     { id: "edits", name: "Edits & Exports", bullets: ["Edit JSON & Markdown artifacts inline", "Build packages for Page Builder, prospect, or archive", "Copy or download any file"], captureEndpoint: null, bodyKey: null, isEditor: true }
   ];
 
+  // Lighthouse performance score projection math
+  function calcProjectedPerformance(lhr) {
+    if (!lhr?.audits) return null;
+
+    // Log-normal CDF (Abramowitz & Stegun approximation)
+    function normalCDF(x) {
+      const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+      const sign = x < 0 ? -1 : 1;
+      const t = 1 / (1 + p * Math.abs(x) / Math.sqrt(2));
+      const y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-(x*x)/2);
+      return 0.5 * (1 + sign * y);
+    }
+    function lnScore(value, median, p10) {
+      if (value <= 0) return 1;
+      const sigma = (Math.log(median) - Math.log(p10)) / 1.2816;
+      return 1 - normalCDF((Math.log(value) - Math.log(median)) / sigma);
+    }
+
+    // Lighthouse 10 scoring weights & curves
+    const METRICS = [
+      { id: 'first-contentful-paint',   w: 0.10, median: 3000,  p10: 1800  },
+      { id: 'speed-index',              w: 0.10, median: 5800,  p10: 2300  },
+      { id: 'largest-contentful-paint', w: 0.25, median: 4000,  p10: 2500  },
+      { id: 'total-blocking-time',      w: 0.30, median: 600,   p10: 200   },
+      { id: 'cumulative-layout-shift',  w: 0.15, median: 0.25,  p10: 0.1   },
+    ];
+
+    // Get current metric values
+    const cur = {};
+    METRICS.forEach(m => { cur[m.id] = lhr.audits[m.id]?.numericValue ?? null; });
+    if (Object.values(cur).every(v => v === null)) return null;
+
+    // Sum savings by audit and map to affected metrics
+    const opIds = ['render-blocking-resources','unused-javascript','unused-css-rules',
+                   'uses-responsive-images','offscreen-images','uses-webp-images',
+                   'uses-optimized-images','unminified-css','unminified-javascript'];
+    let totalMs = 0;
+    let jsMs = 0, renderMs = 0, imageMs = 0;
+    opIds.forEach(id => {
+      const ms = lhr.audits[id]?.details?.overallSavingsMs || 0;
+      totalMs += ms;
+      if (id === 'unused-javascript' || id === 'unminified-javascript') jsMs += ms;
+      else if (id === 'render-blocking-resources' || id === 'unused-css-rules' || id === 'unminified-css') renderMs += ms;
+      else imageMs += ms;
+    });
+    if (totalMs === 0) return null;
+
+    // Apply savings to metrics (conservative — use 70% of potential)
+    const factor = 0.7;
+    const proj = { ...cur };
+    if (proj['largest-contentful-paint'] !== null)
+      proj['largest-contentful-paint'] = Math.max(500, proj['largest-contentful-paint'] - (renderMs + imageMs * 0.5) * factor);
+    if (proj['first-contentful-paint'] !== null)
+      proj['first-contentful-paint'] = Math.max(400, proj['first-contentful-paint'] - renderMs * factor);
+    if (proj['speed-index'] !== null)
+      proj['speed-index'] = Math.max(800, proj['speed-index'] - (renderMs + imageMs * 0.3) * factor);
+    if (proj['total-blocking-time'] !== null)
+      proj['total-blocking-time'] = Math.max(0, proj['total-blocking-time'] - jsMs * factor);
+
+    // Score each projected metric and compute weighted sum
+    let score = 0;
+    METRICS.forEach(m => {
+      const v = proj[m.id];
+      if (v === null) return;
+      score += lnScore(v, m.median, m.p10) * m.w;
+    });
+
+    return Math.min(100, Math.round(score * 100));
+  }
+
   // Lighthouse LHR -> dashboard shapes
   function transformLighthouseScores(lhr) {
     if (!lhr?.categories) return [];
@@ -1645,43 +1731,122 @@
   function transformLighthouseVitals(lhr) {
     if (!lhr?.audits) return [];
     const defs = [
-      { id: 'largest-contentful-paint', name: 'LCP', target: 2500, unit: 'target ≤ 2.5s', fmt: v => (v/1000).toFixed(1) + 's' },
-      { id: 'interaction-to-next-paint', name: 'INP', target: 200, unit: 'target ≤ 200ms', fmt: v => Math.round(v) + 'ms' },
-      { id: 'cumulative-layout-shift', name: 'CLS', target: 0.1, unit: 'target ≤ 0.1', fmt: v => v.toFixed(2) },
-      { id: 'first-contentful-paint', name: 'FCP', target: 1800, unit: 'target ≤ 1.8s', fmt: v => (v/1000).toFixed(1) + 's' },
-      { id: 'total-blocking-time', name: 'TBT', target: 200, unit: 'target ≤ 200ms', fmt: v => Math.round(v) + 'ms' },
-      { id: 'speed-index', name: 'Speed Index', target: 2800, unit: 'target ≤ 2.8s', fmt: v => (v/1000).toFixed(1) + 's' }
+      { id: 'largest-contentful-paint',  name: 'LCP',         label: 'How long until the main image or heading loads',   target: '≤ 2.5s',  fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'first-contentful-paint',    name: 'FCP',         label: 'How long until anything appears on screen',        target: '≤ 1.8s',  fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'interactive',               name: 'TTI',         label: 'How long until the page is actually usable',       target: '≤ 3.8s',  fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'total-blocking-time',       name: 'TBT',         label: 'How long the page is frozen and unresponsive',     target: '≤ 200ms', fmt: v => Math.round(v) + 'ms' },
+      { id: 'speed-index',               name: 'Speed Index', label: 'How quickly the page visually fills in',           target: '≤ 2.8s',  fmt: v => (v/1000).toFixed(1) + 's' },
+      { id: 'cumulative-layout-shift',   name: 'CLS',         label: 'How much elements jump around while loading',      target: '≤ 0.1',   fmt: v => v.toFixed(3) },
+      { id: 'interaction-to-next-paint', name: 'INP',         label: 'How fast the page responds to clicks and taps',    target: '≤ 200ms', fmt: v => Math.round(v) + 'ms' },
+      { id: 'server-response-time',      name: 'TTFB',        label: 'How long the server takes to start responding — a hosting/server problem, not a code problem', target: '≤ 600ms', fmt: v => Math.round(v) + 'ms' },
     ];
     return defs.map(d => {
       const audit = lhr.audits[d.id];
-      const raw = audit?.numericValue ?? 0;
-      return { name: d.name, value: d.fmt(raw), unit: d.unit, pass: raw <= d.target };
+      if (!audit) return null;
+      const raw = audit.numericValue ?? 0;
+      const score = audit.score ?? 0;
+      const status = score >= 0.9 ? 'pass' : score >= 0.5 ? 'warn' : 'fail';
+      const statusLabel = score >= 0.9 ? 'Good' : score >= 0.5 ? 'Needs Work' : 'Poor';
+      return { name: d.name, label: d.label, value: d.fmt(raw), target: d.target, status, statusLabel };
+    }).filter(Boolean);
+  }
+
+  function extractFixAdvice(lhr, auditId) {
+    const advice = [];
+    const audit = lhr.audits[auditId];
+    if (audit?.description) advice.push({ platform: null, text: stripMarkdown(audit.description.split('.')[0] + '.') });
+    (lhr.stackPacks || []).forEach(pack => {
+      const tip = pack.descriptions?.[auditId];
+      if (tip) advice.push({ platform: pack.id.charAt(0).toUpperCase() + pack.id.slice(1), text: stripMarkdown(tip) });
     });
+    return advice;
   }
 
   function transformLighthouseOpportunities(lhr) {
     if (!lhr?.audits) return [];
     const opIds = ['unused-javascript', 'unused-css-rules', 'render-blocking-resources', 'uses-responsive-images',
                    'offscreen-images', 'uses-webp-images', 'uses-optimized-images', 'unminified-css', 'unminified-javascript'];
-    return opIds.map(id => lhr.audits[id]).filter(a => a && a.score !== null && a.score < 1)
-      .map(a => {
+    return opIds.filter(id => {
+      const a = lhr.audits[id];
+      return a && a.score !== null && a.score < 1;
+    }).map(id => {
+        const a = lhr.audits[id];
         const savings = a.details?.overallSavingsBytes;
-        const savingStr = savings ? `−${Math.round(savings / 1024)} KB` : '';
+        const savingsMs = a.details?.overallSavingsMs;
+        const savingStr = [
+          savings  ? `−${Math.round(savings / 1024)} KB` : '',
+          savingsMs ? `−${savingsMs >= 1000 ? (savingsMs/1000).toFixed(1)+'s' : Math.round(savingsMs)+'ms'}` : ''
+        ].filter(Boolean).join(' · ');
         const priority = savings > 100000 ? 'high' : savings > 30000 ? 'med' : 'low';
-        return { priority, name: a.title, desc: a.description?.split('.')[0] || '', saving: savingStr };
+        const rawItems = a.details?.items || [];
+        const elements = rawItems.map(it => {
+          if (it.url) {
+            const wasted = it.wastedBytes ? `−${Math.round(it.wastedBytes/1024)} KB` : it.wastedMs ? `−${Math.round(it.wastedMs)}ms` : '';
+            const filename = it.url.split('/').pop().split('?')[0];
+            return { label: filename, detail: it.url, wasted };
+          } else if (it.node?.selector) {
+            return { label: it.node.selector, detail: it.node.snippet || '', wasted: it.wastedBytes ? `−${Math.round(it.wastedBytes/1024)} KB` : '' };
+          }
+          return null;
+        }).filter(Boolean);
+        const fixAdvice = extractFixAdvice(lhr, id);
+        return { priority, name: a.title, desc: a.description?.split('.')[0] || '', saving: savingStr, elements, fixAdvice };
       }).sort((a,b) => ({ high:0,med:1,low:2 }[a.priority] - { high:0,med:1,low:2 }[b.priority]));
   }
 
   function transformLighthouseFindings(lhr) {
-    if (!lhr?.audits) return [];
-    const findIds = ['meta-description', 'link-text', 'color-contrast', 'image-alt', 'document-title',
-                     'html-has-lang', 'robots-txt', 'crawlable-anchors', 'is-crawlable'];
-    return findIds.map(id => lhr.audits[id]).filter(a => a && a.score !== null && a.score < 1)
-      .map(a => {
-        const count = a.details?.items?.length || 0;
-        const priority = a.scoreDisplayMode === 'binary' ? 'high' : count > 5 ? 'high' : count > 0 ? 'med' : 'low';
-        return { priority, name: a.title, desc: count > 0 ? `${count} issue(s)` : a.description?.split('.')[0] || '' };
+    if (!lhr?.audits) return { failing: [], passing: [] };
+    const cats = ['seo', 'best-practices'];
+    const seen = new Set();
+    const failing = [], passing = [];
+    cats.forEach(catKey => {
+      const refs = lhr.categories?.[catKey]?.auditRefs || [];
+      refs.forEach(ref => {
+        if (seen.has(ref.id)) return;
+        seen.add(ref.id);
+        const a = lhr.audits[ref.id];
+        if (!a || a.score === null || a.scoreDisplayMode === 'notApplicable' || a.scoreDisplayMode === 'manual') return;
+        const rawItems = a.details?.items || [];
+        const count = rawItems.length;
+        const priority = ref.weight >= 7 ? 'high' : ref.weight >= 3 ? 'med' : 'low';
+        const elements = rawItems.map(it => ({
+          selector: it.node?.selector || it.source?.url || it.url || '',
+          snippet: it.node?.snippet || (it.resolution ? `Resolution: ${it.resolution}` : ''),
+          label: it.node?.nodeLabel || it.source?.url || it.url || '',
+          explanation: it.explanation || it.node?.explanation || '',
+        })).filter(el => el.selector || el.snippet || el.label);
+        const fixAdvice = extractFixAdvice(lhr, ref.id);
+        const item = { priority, name: a.title, desc: count > 0 ? `${count} issue(s)` : a.description?.split('.')[0] || '', elements, fixAdvice };
+        if (a.score < 1) failing.push(item);
+        else passing.push(item);
       });
+    });
+    const order = { high: 0, med: 1, low: 2 };
+    failing.sort((a, b) => order[a.priority] - order[b.priority]);
+    return { failing, passing };
+  }
+
+  function transformLighthouseAccessibility(lhr) {
+    if (!lhr?.audits || !lhr?.categories?.accessibility) return { failing: [], passing: [] };
+    const refs = lhr.categories.accessibility.auditRefs || [];
+    const failing = [], passing = [];
+    refs.forEach(ref => {
+      const audit = lhr.audits[ref.id];
+      if (!audit || audit.score === null || audit.scoreDisplayMode === 'notApplicable' || audit.scoreDisplayMode === 'manual') return;
+      const priority = ref.weight >= 7 ? 'high' : ref.weight >= 3 ? 'med' : 'low';
+      const rawItems = audit.details?.items || [];
+      const elements = rawItems.map(it => ({
+        selector: it.node?.selector || '',
+        snippet: it.node?.snippet || '',
+        label: it.node?.nodeLabel || '',
+        explanation: it.explanation || it.node?.explanation || '',
+      })).filter(el => el.selector || el.snippet);
+      const item = { priority, name: audit.title, elements };
+      if (audit.score < 1) failing.push(item);
+      else passing.push(item);
+    });
+    failing.sort((a, b) => ({ high: 0, med: 1, low: 2 }[a.priority] - { high: 0, med: 1, low: 2 }[b.priority]));
+    return { failing, passing };
   }
 
   function transformLighthouseStack(lhr) {
@@ -1715,6 +1880,7 @@
         ogImage: p.ogTags?.image || '',
         twitterCard: p.ogTags?.twitterCard || '',
         hreflangCount: p.hreflangTags?.length || 0,
+        colorPalette: p.colorPalette || {},
       };
     });
   }
@@ -1736,12 +1902,39 @@
     }));
   }
 
+  function extractSchemaTypes(schemas) {
+    const found = new Set();
+    (schemas || []).forEach(s => {
+      // Flat @type
+      const addType = t => { if (t) found.add(t); };
+      if (Array.isArray(s['@type'])) s['@type'].forEach(addType);
+      else addType(s['@type']);
+      // Yoast @graph format
+      (s['@graph'] || []).forEach(node => {
+        if (Array.isArray(node['@type'])) node['@type'].forEach(addType);
+        else addType(node['@type']);
+      });
+    });
+    return Array.from(found);
+  }
+
+  const CRITICAL_SCHEMA_TYPES = ['LocalBusiness', 'Organization', 'FAQPage', 'Product', 'Review'];
+
   function transformCrawlerSchema(crawl) {
     if (!crawl?.totalPages) return [];
-    return crawl.totalPages.filter(p => p.aeoAssessment).map(p => ({
-      url: p.url, types: p.aeoAssessment.foundTypes || [],
-      missing: p.aeoAssessment.missingCriticalTypes || [], aeoReady: p.aeoAssessment.isAEOReady
+    // Collect all types across all pages
+    const allTypes = new Set();
+    crawl.totalPages.forEach(p => extractSchemaTypes(p.schema || []).forEach(t => allTypes.add(t)));
+    const foundTypes = Array.from(allTypes);
+    const missing = CRITICAL_SCHEMA_TYPES.filter(t => !foundTypes.includes(t));
+    const isAEOReady = (foundTypes.includes('LocalBusiness') || foundTypes.includes('Organization')) &&
+                       (foundTypes.includes('FAQPage') || foundTypes.includes('Product'));
+    // Per-page for detail rows
+    const pages = crawl.totalPages.filter(p => p.schema?.length).map(p => ({
+      url: p.url,
+      types: extractSchemaTypes(p.schema),
     }));
+    return { foundTypes, missing, isAEOReady, pages };
   }
 
   function transformCrawlerReadability(crawl) {
@@ -1959,9 +2152,19 @@
 
   function transformBilingualGaps(bi) {
     if (!bi?.gaps) return [];
-    return bi.gaps.filter(g => g.status === 'missing').slice(0, 20).map(g => ({
-      englishUrl: g.englishUrl, spanishUrl: g.expectedSpanishUrl, status: g.status
-    }));
+    const seen = new Set();
+    return bi.gaps
+      .filter(g => g.status === 'missing')
+      .filter(g => {
+        const key = (g.englishUrl || '').replace(/\/$/, '');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 20)
+      .map(g => ({
+        englishUrl: g.englishUrl, spanishUrl: g.expectedSpanishUrl, status: g.status
+      }));
   }
 
   // Recommendations -> category buckets
@@ -2002,6 +2205,7 @@
     { id: "vitals", name: "Core Web Vitals", desc: "LCP, INP, CLS, FCP, TBT, Speed Index" },
     { id: "opportunities", name: "Optimization Opportunities", desc: "Estimated savings & priorities" },
     { id: "findings", name: "SEO & Best Practices", desc: "Flagged issues" },
+    { id: "accessibility", name: "Accessibility Findings", desc: "Failing & passing accessibility audits" },
     { id: "stack", name: "Detected Tech Stack", desc: "Frameworks, CMS, analytics, CDN" }
   ];
   const CRAWLER_SECTIONS = [
@@ -2202,7 +2406,20 @@
       const isEditor = t.isEditor;
       const statusBadge = isEditor ? '<span class="status-pill done"><span class="dot"></span>ready</span>' : `<span class="status-pill ${s.status}"><span class="dot"></span>${s.status}</span>`;
       const captureCount = isEditor ? Object.values(STATE.workspace?.captures || {}).filter(s => s?.latest).length : 0;
-      const statBlock = isEditor ? `<div class="stat"><span class="v">${captureCount} artifact${captureCount !== 1 ? 's' : ''}</span></div>` : `<div class="stat"><span class="v">${s.stat}</span></div>`;
+      let statBlock;
+      if (isEditor) {
+        statBlock = `<div class="stat"><span class="v">${captureCount} artifact${captureCount !== 1 ? 's' : ''}</span></div>`;
+      } else if (t.id === 'lighthouse' && s.status === 'done') {
+        const lhr = captureData('lighthouse');
+        const cats = lhr?.categories || {};
+        const sc = key => cats[key]?.score != null ? Math.round(cats[key].score * 100) : '—';
+        const col = v => v === '—' ? 'var(--muted)' : v >= 90 ? 'var(--good)' : v >= 50 ? 'var(--warn)' : 'var(--bad)';
+        const mini = (label, val) => `<div style="text-align:center"><div style="font-size:16px;font-weight:700;color:${col(val)};line-height:1">${val}</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">${label}</div></div>`;
+        const p = sc('performance'), se = sc('seo'), a = sc('accessibility'), bp = sc('best-practices');
+        statBlock = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;padding:4px 0">${mini('Perf',p)}${mini('SEO',se)}${mini('Access.',a)}${mini('Best Pr.',bp)}</div>`;
+      } else {
+        statBlock = `<div class="stat"><span class="v">${s.stat}</span></div>`;
+      }
       const runButton = isEditor ? '' : `<button class="btn primary sm" data-run="${t.id}" onclick="runTool('${t.id}', event)" style="margin-right:8px">Run</button>`;
       card.innerHTML = `
         <div class="top">
@@ -2266,12 +2483,60 @@
     const lhr = captureData('lighthouse');
     if (!lhr) return renderEmptyState("lighthouse-scores-data", "Run Lighthouse to see scores.");
     const grid = document.getElementById("lighthouse-scores-data");
+    const scoreLabel = sc => sc >= 90 ? 'Good' : sc >= 50 ? 'Fair' : sc >= 25 ? 'Poor' : 'Critical';
+    const scoreLabelColor = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
+    const benchmarks = { 'Performance': 45, 'SEO': 80, 'Accessibility': 72, 'Best Practices': 78 };
     transformLighthouseScores(lhr).forEach(s => {
       const card = document.createElement("div");
       card.className = `data-card score-card ${s.severity}`;
-      card.innerHTML = `<div class="gauge" style="--p:${s.score}" data-v="${s.score}"></div><div><div class="label">${s.category}</div><div class="name">${s.score} / 100</div><div class="desc">${s.desc}</div></div>`;
+      const lbl = scoreLabel(s.score);
+      const lblColor = scoreLabelColor[s.severity];
+      const avg = benchmarks[s.category];
+      const avgNote = avg != null ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">avg small business: ~${avg}</div>` : '';
+      card.innerHTML = `<div class="gauge" style="--p:${s.score}" data-v="${s.score}"></div><div><div class="label">${s.category}</div><div class="name">${s.score} / 100</div><div style="font-size:12px;font-weight:700;color:${lblColor};margin-top:2px;text-transform:uppercase;letter-spacing:0.06em">${lbl}</div>${avgNote}<div class="desc">${s.desc}</div></div>`;
       grid.appendChild(card);
     });
+
+    // Projected score card
+    const projected = calcProjectedPerformance(lhr);
+    if (projected !== null) {
+      const projCard = document.createElement("div");
+      projCard.className = "data-card";
+      projCard.style.cssText = "grid-column:1/-1;padding:20px 24px";
+      const projColor = projected >= 90 ? 'var(--good)' : projected >= 50 ? 'var(--warn)' : 'var(--bad)';
+      const delta = projected - Math.round((lhr.categories?.performance?.score ?? 0) * 100);
+      const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+      projCard.innerHTML = `
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px">
+          Projected Performance Score — if top issues were resolved
+        </div>
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <div style="font-size:48px;font-weight:700;color:${projColor};line-height:1">${projected}</div>
+          <div>
+            <div style="font-size:20px;font-weight:700;color:${delta > 0 ? 'var(--good)' : 'var(--muted)'}">
+              ${deltaStr} points
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;max-width:420px;line-height:1.5">
+              Estimate based on potential savings from fixable opportunities (render-blocking resources, unused JS/CSS, unoptimized images). Actual improvement may vary.
+            </div>
+          </div>
+        </div>`;
+      grid.appendChild(projCard);
+    }
+
+    // Full-page screenshot captured at audit time
+    const ss = lhr.fullPageScreenshot?.screenshot;
+    if (ss?.data) {
+      const wrap = document.createElement("div");
+      wrap.className = "data-card";
+      wrap.style.cssText = "grid-column:1/-1;padding:16px";
+      wrap.innerHTML = `
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
+          Page snapshot at audit time — ${ss.width}×${ss.height}px
+        </div>
+        <img src="${ss.data}" alt="Full page screenshot" style="width:100%;max-width:400px;border-radius:6px;border:1px solid var(--border);display:block">`;
+      grid.appendChild(wrap);
+    }
   }
 
   function renderLighthouseVitals() {
@@ -2279,12 +2544,59 @@
     const lhr = captureData('lighthouse');
     if (!lhr) return renderEmptyState("lighthouse-vitals-data", "Run Lighthouse to see vitals.");
     const grid = document.getElementById("lighthouse-vitals-data");
+    const statusColor = { pass: 'var(--good)', warn: '#f59e0b', fail: 'var(--bad)' };
+    const statusBg    = { pass: 'rgba(34,197,94,0.12)', warn: 'rgba(245,158,11,0.12)', fail: 'rgba(239,68,68,0.12)' };
     transformLighthouseVitals(lhr).forEach(v => {
       const card = document.createElement("div");
-      card.className = "data-card metric-card";
-      card.innerHTML = `<div><div class="name">${v.name}</div><div class="unit">${v.unit}</div></div><div><span class="value">${v.value}</span><span class="badge ${v.pass ? 'pass' : 'fail'}">${v.pass ? 'Pass' : 'Fail'}</span></div>`;
+      card.className = "data-card";
+      card.style.cssText = `border-left: 3px solid ${statusColor[v.status]}; padding: 16px 18px;`;
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">${v.name}</div>
+            <div style="font-size:26px;font-weight:700;color:${statusColor[v.status]};line-height:1">${v.value}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">target ${v.target}</div>
+          </div>
+          <span style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:${statusBg[v.status]};color:${statusColor[v.status]};white-space:nowrap">${v.statusLabel}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.4">${v.label}</div>`;
       grid.appendChild(card);
     });
+  }
+
+  function stripMarkdown(text) {
+    if (!text) return '';
+    return text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // [text](url) -> text
+      .replace(/`([^`]+)`/g, '$1')               // `code` -> code
+      .replace(/\*\*([^*]+)\*\*/g, '$1');        // **bold** -> bold
+  }
+
+  function buildFixAdvice(fixAdvice) {
+    if (!fixAdvice?.length) return '';
+    const items = fixAdvice.map(f => `
+      <div style="margin-bottom:8px">
+        ${f.platform ? `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:3px">${f.platform}</div>` : ''}
+        <div style="font-size:12px;color:var(--ink-2);line-height:1.5">${f.text}</div>
+      </div>`).join('');
+    return `<div style="margin-top:12px;padding:10px 12px;background:rgba(59,130,246,0.06);border-radius:6px;border:1px solid rgba(59,130,246,0.15)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:8px">How to fix</div>
+      ${items}
+    </div>`;
+  }
+
+  function buildElementDrilldown(elements) {
+    if (!elements?.length) return '';
+    const rows = elements.map(el => {
+      const top = el.label && el.label !== el.selector
+        ? `<div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px">${el.label}</div>` : '';
+      const sel = el.selector ? `<div style="font-size:11px;color:var(--muted);font-family:monospace">${el.selector}</div>` : '';
+      const snip = el.snippet || el.detail
+        ? `<div style="font-size:11px;color:var(--muted);font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${el.snippet || el.detail}</div>` : '';
+      const wasted = el.wasted ? `<span style="font-size:11px;color:var(--bad);font-weight:700;white-space:nowrap">${el.wasted}</span>` : '';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="min-width:0;flex:1">${top}${sel}${snip}</div>${wasted}</div>`;
+    }).join('');
+    return `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">${rows}</div>`;
   }
 
   function renderLighthouseOpportunities() {
@@ -2295,22 +2607,111 @@
     transformLighthouseOpportunities(lhr).forEach(o => {
       const card = document.createElement("div");
       card.className = "data-card opportunity-card";
-      card.innerHTML = `<span class="priority ${o.priority}">${o.priority}</span><div><div class="name">${o.name}</div><div class="desc">${o.desc}</div></div><div class="saving">${o.saving}</div>`;
+      const hasItems = o.elements?.length > 0;
+      const drilldown = buildElementDrilldown(o.elements);
+      const advice = buildFixAdvice(o.fixAdvice);
+      card.innerHTML = `
+        <span class="priority ${o.priority}">${o.priority}</span>
+        <div style="flex:1;min-width:0">
+          <div class="name">${o.name}</div>
+          <div class="desc">${o.desc}</div>
+          ${hasItems ? drilldown : ''}
+          ${advice}
+        </div>
+        <div class="saving">${o.saving}</div>`;
       grid.appendChild(card);
     });
   }
 
   function renderLighthouseFindings() {
-    clearGrid("lighthouse-findings-data");
+    const container = document.getElementById("lighthouse-findings-data");
+    if (!container) return;
+    container.innerHTML = '';
     const lhr = captureData('lighthouse');
-    if (!lhr) return renderEmptyState("lighthouse-findings-data", "Run Lighthouse to see findings.");
-    const grid = document.getElementById("lighthouse-findings-data");
-    transformLighthouseFindings(lhr).forEach(f => {
+    if (!lhr) {
+      container.innerHTML = `<div class="data-card" style="text-align:center;color:var(--muted);padding:40px"><p>Run Lighthouse to see findings.</p></div>`;
+      return;
+    }
+    const { failing, passing } = transformLighthouseFindings(lhr);
+    const renderItem = (f, container) => {
       const card = document.createElement("div");
       card.className = "data-card opportunity-card";
-      card.innerHTML = `<span class="priority ${f.priority}">${f.priority}</span><div><div class="name">${f.name}</div><div class="desc">${f.desc}</div></div><div></div>`;
-      grid.appendChild(card);
-    });
+      const hasItems = f.elements?.length > 0;
+      const drilldown = buildElementDrilldown(f.elements);
+      const advice = buildFixAdvice(f.fixAdvice);
+      card.innerHTML = `
+        <span class="priority ${f.priority}">${f.priority}</span>
+        <div style="flex:1;min-width:0">
+          <div class="name">${f.name}</div>
+          <div class="desc">${f.desc}</div>
+          ${hasItems ? drilldown : ''}
+          ${advice}
+        </div>
+        <div></div>`;
+      container.appendChild(card);
+    };
+    if (failing.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:0 0 12px';
+      h.textContent = `${failing.length} Failing`;
+      container.appendChild(h);
+      failing.forEach(f => renderItem(f, container));
+    }
+    if (passing.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--good);margin:24px 0 12px';
+      h.textContent = `${passing.length} Passing`;
+      container.appendChild(h);
+      passing.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'data-card opportunity-card';
+        card.innerHTML = `<span class="priority" style="background:rgba(16,185,129,0.15);color:var(--good);border-color:rgba(16,185,129,0.3)">pass</span><div><div class="name">${f.name}</div></div><div></div>`;
+        container.appendChild(card);
+      });
+    }
+    if (!failing.length && !passing.length) {
+      container.innerHTML = `<div class="data-card" style="text-align:center;color:var(--muted);padding:40px"><p>No findings in this capture.</p></div>`;
+    }
+  }
+
+  function renderLighthouseAccessibility() {
+    const container = document.getElementById("lighthouse-accessibility-data");
+    if (!container) return;
+    container.innerHTML = '';
+    const lhr = captureData('lighthouse');
+    if (!lhr) {
+      container.innerHTML = `<div class="data-card" style="text-align:center;color:var(--muted);padding:40px"><p>Run Lighthouse to see accessibility findings.</p></div>`;
+      return;
+    }
+    const { failing, passing } = transformLighthouseAccessibility(lhr);
+    if (!failing.length && !passing.length) {
+      container.innerHTML = `<div class="data-card" style="text-align:center;color:var(--muted);padding:40px"><p>No accessibility audits found in this capture.</p></div>`;
+      return;
+    }
+    if (failing.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:0 0 12px';
+      h.textContent = `${failing.length} Failing`;
+      container.appendChild(h);
+      failing.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'data-card opportunity-card';
+        card.innerHTML = `<span class="priority ${f.priority}">${f.priority}</span><div><div class="name">${f.name}</div><div class="desc">${f.desc}</div></div><div></div>`;
+        container.appendChild(card);
+      });
+    }
+    if (passing.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin:24px 0 12px';
+      h.textContent = `${passing.length} Passed`;
+      container.appendChild(h);
+      passing.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'data-card opportunity-card';
+        card.innerHTML = `<span class="priority" style="background:rgba(34,197,94,0.15);color:var(--good)">pass</span><div><div class="name">${f.name}</div></div><div></div>`;
+        container.appendChild(card);
+      });
+    }
   }
 
   function renderLighthouseStack() {
@@ -2318,10 +2719,43 @@
     const lhr = captureData('lighthouse');
     if (!lhr) return renderEmptyState("lighthouse-stack-data", "Run Lighthouse to see tech stack.");
     const grid = document.getElementById("lighthouse-stack-data");
-    transformLighthouseStack(lhr).forEach(tech => {
-      const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = tech; grid.appendChild(chip);
-    });
-    if (!grid.children.length) renderEmptyState("lighthouse-stack-data", "No stack packs detected.");
+
+    // Stack packs (Lighthouse-detected frameworks)
+    const techs = transformLighthouseStack(lhr);
+    if (techs.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;width:100%';
+      h.textContent = 'Detected Stack';
+      grid.appendChild(h);
+      techs.forEach(tech => {
+        const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = tech; grid.appendChild(chip);
+      });
+    }
+
+    // Third-party entities
+    const entities = (lhr.entities || []).filter(e => !e.isFirstParty);
+    if (entities.length) {
+      const h = document.createElement('div');
+      h.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 10px;width:100%';
+      h.textContent = 'Third-Party Entities';
+      grid.appendChild(h);
+      entities.forEach(e => {
+        const isUnknown = e.isUnrecognized;
+        const card = document.createElement('div'); card.className = 'data-card';
+        card.style.cssText = isUnknown ? 'border-left:3px solid var(--bad)' : '';
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:${isUnknown ? 'var(--bad)' : 'var(--ink)'}">${e.name}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">${(e.origins || []).join(', ')}</div>
+            </div>
+            ${isUnknown ? `<span style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:rgba(239,68,68,0.12);color:var(--bad);white-space:nowrap">Unrecognized</span>` : '<span style="padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:rgba(34,197,94,0.12);color:var(--good);white-space:nowrap">Known</span>'}
+          </div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    if (!techs.length && !entities.length) renderEmptyState("lighthouse-stack-data", "No stack packs or third-party entities detected.");
   }
 
   function renderCrawlerPages() {
@@ -2373,6 +2807,16 @@
           ${row('OG title', p.ogTitle || `<span style="color:var(--bad)">Missing</span>`)}
           ${row('OG image', p.ogImage || `<span style="color:var(--bad)">Missing</span>`)}
           ${row('Twitter card', p.twitterCard || `<span style="color:var(--muted)">None</span>`)}
+
+          ${Object.keys(p.colorPalette || {}).length ? `
+          ${groupHeader('Brand Colors')}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            ${Object.entries(p.colorPalette).map(([k, v]) => `
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="width:20px;height:20px;border-radius:4px;background:${v};border:1px solid rgba(255,255,255,0.1);flex-shrink:0"></div>
+                <span style="font-size:11px;color:var(--muted)">${k}</span>
+              </div>`).join('')}
+          </div>` : ''}
         </div>
       `;
       card.addEventListener("click", () => card.classList.toggle("expanded"));
@@ -2461,9 +2905,31 @@
     const crawl = captureData('crawl');
     if (!crawl) return renderEmptyState("crawler-schema-data", "Run Site Crawler first.");
     const grid = document.getElementById("crawler-schema-data");
-    transformCrawlerSchema(crawl).forEach(s => {
+    const { foundTypes, missing, isAEOReady, pages } = transformCrawlerSchema(crawl);
+
+    // Summary card
+    const summary = document.createElement("div"); summary.className = "data-card";
+    summary.style.cssText = `border-left:3px solid ${isAEOReady ? 'var(--good)' : 'var(--bad)'}`;
+    summary.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Found across all pages</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${foundTypes.length ? foundTypes.map(t => `<span style="padding:3px 10px;border-radius:5px;background:rgba(34,197,94,0.12);color:var(--good);font-size:12px;font-weight:600">${t}</span>`).join('') : '<span style="color:var(--muted);font-size:13px">None detected</span>'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Missing critical types</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${missing.length ? missing.map(t => `<span style="padding:3px 10px;border-radius:5px;background:rgba(239,68,68,0.12);color:var(--bad);font-size:12px;font-weight:600">${t}</span>`).join('') : '<span style="color:var(--good);font-size:13px">None</span>'}</div>
+        </div>
+        <span style="padding:4px 12px;border-radius:6px;background:${isAEOReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${isAEOReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap;align-self:flex-start">${isAEOReady ? 'AEO Ready' : 'Not AEO Ready'}</span>
+      </div>`;
+    grid.appendChild(summary);
+
+    // Per-page rows
+    pages.forEach(p => {
       const card = document.createElement("div"); card.className = "data-card";
-      card.innerHTML = `<div style="display:grid; grid-template-columns:120px 1fr 1fr auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${s.url}</div><div><div style="font-size:11px;color:var(--muted)">Found</div><div style="font-size:13px">${s.types.join(', ') || 'None'}</div></div><div><div style="font-size:11px;color:var(--muted)">Missing</div><div style="font-size:13px;color:${s.missing.length ? 'var(--warn)' : 'var(--good)'}">${s.missing.length ? s.missing.join(', ') : 'None'}</div></div><div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:${s.aeoReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${s.aeoReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase">${s.aeoReady ? 'AEO Ready' : 'Not Ready'}</span></div></div>`;
+      card.innerHTML = `
+        <div style="font-size:12px;font-family:monospace;color:var(--accent);margin-bottom:6px">${p.url}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${p.types.map(t => `<span style="padding:2px 8px;border-radius:4px;background:rgba(34,197,94,0.10);color:var(--good);font-size:11px">${t}</span>`).join('')}</div>`;
       grid.appendChild(card);
     });
   }
@@ -2747,6 +3213,13 @@
     }
     if (crawl?.sitemap) {
       metricCard("Sitemap", crawl.sitemap.found ? "✓ Found" : "× Missing", crawl.sitemap.found ? `${crawl.sitemap.urlCount} URLs · ${crawl.sitemap.orphanedUrls?.length || 0} orphaned` : '', !crawl.sitemap.found);
+      const orphaned = crawl.sitemap.orphanedUrls || [];
+      if (orphaned.length) {
+        const c = document.createElement("div"); c.className = "data-card";
+        c.style.cssText = 'border-left:3px solid var(--bad)';
+        c.innerHTML = `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--bad);margin-bottom:10px">Orphaned Sitemap URLs — ${orphaned.length} listed but unreachable</div>${orphaned.map(u => `<div style="font-size:12px;font-family:monospace;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border)">${u}</div>`).join('')}`;
+        grid.appendChild(c);
+      }
     }
     if (crawl?.totalPages) {
       metricCard("Pages crawled", crawl.totalPages.length, "internal links + sitemap", false);
@@ -3082,6 +3555,15 @@
     const card = document.createElement("div"); card.className = "data-card summary-card";
     card.innerHTML = `<div class="kv"><div class="k">Total pages</div><div class="v">${c.totalPages}</div></div><div class="kv"><div class="k">English pages</div><div class="v">${c.englishPages}</div></div><div class="kv"><div class="k">Spanish pages</div><div class="v">${c.spanishPages}</div></div><div class="kv"><div class="k">Coverage %</div><div class="v" style="color:${pct >= 50 ? 'var(--good)' : pct > 0 ? 'var(--warn)' : 'var(--bad)'};font-size:20px">${c.coveragePct}%</div></div>`;
     grid.appendChild(card);
+
+    // Limitations footnote
+    const limitations = bi.limitations || [];
+    if (limitations.length) {
+      const note = document.createElement("div");
+      note.style.cssText = 'margin-top:4px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,0.03)';
+      note.innerHTML = `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Detection Caveats</div>${limitations.map(l => `<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:4px">⚠ ${l}</div>`).join('')}`;
+      grid.appendChild(note);
+    }
   }
 
   function renderBilingualGaps() {
@@ -3134,7 +3616,12 @@
 
   function renderRecommendationCards(data, gridId) {
     clearGrid(gridId);
-    if (!data.length) return renderEmptyState(gridId, "No recommendations in this category.");
+    if (!data.length) {
+      const msg = gridId === 'recommendations-engagement-data'
+        ? 'Run Open Books (GA4) to populate this bucket — requires client credentials.'
+        : 'No recommendations in this category.';
+      return renderEmptyState(gridId, msg);
+    }
     const grid = document.getElementById(gridId);
     data.forEach((r, i) => {
       const card = document.createElement("div");
@@ -3254,7 +3741,7 @@
      ═══════════════════════════════════════════════════════ */
   const VIEWS = [
     "landing",
-    "lighthouse-hub", "lighthouse-scores", "lighthouse-vitals", "lighthouse-opportunities", "lighthouse-findings", "lighthouse-stack",
+    "lighthouse-hub", "lighthouse-scores", "lighthouse-vitals", "lighthouse-opportunities", "lighthouse-findings", "lighthouse-accessibility", "lighthouse-stack",
     "crawler-hub", "crawler-pages", "crawler-broken", "crawler-images", "crawler-schema", "crawler-readability", "crawler-screenshots", "crawler-social",
     "broad-traffic-hub", "broad-traffic-overview", "broad-traffic-gbp", "broad-traffic-ads", "broad-traffic-social", "broad-traffic-index", "broad-traffic-competitor",
     "deep-traffic-hub", "deep-traffic-ga4-summary", "deep-traffic-ga4-pages", "deep-traffic-ga4-devices", "deep-traffic-ga4-flow", "deep-traffic-gsc-summary", "deep-traffic-gsc-almost", "deep-traffic-gsc-lowctr", "deep-traffic-gsc-coverage",
@@ -3271,6 +3758,7 @@
     "lighthouse-vitals": "Workspace / Lighthouse / Core Web Vitals",
     "lighthouse-opportunities": "Workspace / Lighthouse / Optimization Opportunities",
     "lighthouse-findings": "Workspace / Lighthouse / SEO & Best Practices",
+    "lighthouse-accessibility": "Workspace / Lighthouse / Accessibility Findings",
     "lighthouse-stack": "Workspace / Lighthouse / Tech Stack",
     "crawler-hub": "Workspace / Site Crawler",
     "crawler-pages": "Workspace / Site Crawler / Page Content Inventory",
@@ -3721,6 +4209,7 @@
     renderLighthouseVitals();
     renderLighthouseOpportunities();
     renderLighthouseFindings();
+    renderLighthouseAccessibility();
     renderLighthouseStack();
     renderSectionCards(CRAWLER_SECTIONS, "crawler-sections", "crawler");
     renderCrawlerTechnicalSignals();

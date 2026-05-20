@@ -40,12 +40,12 @@ function extractLighthouseRecs(ws: WorkspaceState, recs: Recommendation[]): void
   const seoScore = Math.round((lh.categories?.seo?.score ?? 0) * 100);
   const a11yScore = Math.round((lh.categories?.accessibility?.score ?? 0) * 100);
 
-  if (perfScore < 75) {
-    recs.push(rec('technical', `Optimize performance (current score: ${perfScore}/100)`, 'lighthouse', 'high', 'medium', `Performance score is ${perfScore}, below the 75 threshold.`));
-  }
-
   const lcp = (lh.audits?.['largest-contentful-paint']?.numericValue ?? 0) / 1000;
-  if (lcp > 2.5) {
+  if (perfScore < 75) {
+    const lcpNote = lcp > 2.5 ? ` LCP is ${lcp.toFixed(1)}s (target <2.5s) — the main image or heading is loading too slowly.` : '';
+    recs.push(rec('technical', `Optimize performance (current score: ${perfScore}/100)`, 'lighthouse', 'high', 'medium', `Performance score is ${perfScore}, below the 75 threshold.${lcpNote}`));
+  } else if (lcp > 2.5) {
+    // Only show LCP as its own card if performance score is otherwise acceptable
     recs.push(rec('technical', `Fix Largest Contentful Paint (${lcp.toFixed(1)}s, target: <2.5s)`, 'lighthouse', 'high', 'medium', `LCP is ${lcp.toFixed(1)}s, failing the 2.5s threshold.`));
   }
 
@@ -54,16 +54,18 @@ function extractLighthouseRecs(ws: WorkspaceState, recs: Recommendation[]): void
     recs.push(rec('technical', `Fix layout shift (CLS: ${cls.toFixed(3)}, target: <0.1)`, 'lighthouse', 'medium', 'medium', `CLS is ${cls.toFixed(3)}, above the 0.1 threshold.`));
   }
 
+  const byteImpact = (kb: number): ImpactLevel => kb >= 500 ? 'high' : kb >= 100 ? 'medium' : 'low';
+
   const unusedJs = lh.audits?.['unused-javascript'];
   if (unusedJs?.details?.overallSavingsBytes > 50000) {
     const kb = Math.round(unusedJs.details.overallSavingsBytes / 1024);
-    recs.push(rec('technical', `Remove unused JavaScript (${kb}KB savings)`, 'lighthouse', 'medium', 'low', `${kb}KB of unused JavaScript detected.`));
+    recs.push(rec('technical', `Remove unused JavaScript (${kb}KB savings)`, 'lighthouse', byteImpact(kb), 'low', `${kb}KB of unused JavaScript detected.`));
   }
 
   const unusedCss = lh.audits?.['unused-css-rules'];
   if (unusedCss?.details?.overallSavingsBytes > 20000) {
     const kb = Math.round(unusedCss.details.overallSavingsBytes / 1024);
-    recs.push(rec('technical', `Remove unused CSS (${kb}KB savings)`, 'lighthouse', 'low', 'low', `${kb}KB of unused CSS detected.`));
+    recs.push(rec('technical', `Remove unused CSS (${kb}KB savings)`, 'lighthouse', byteImpact(kb), 'low', `${kb}KB of unused CSS detected.`));
   }
 
   const webp = lh.audits?.['uses-webp-images'];

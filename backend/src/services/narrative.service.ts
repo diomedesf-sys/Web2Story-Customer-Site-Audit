@@ -1,5 +1,8 @@
 import { WorkspaceState, NarrativeSection } from '../types/workspace.types';
 
+const pl = (n: number, word: string, plural?: string) =>
+  `${n} ${n === 1 ? word : (plural ?? word + 's')}`;
+
 export function generateNarrative(workspace: WorkspaceState): NarrativeSection[] {
   return [
     buildExecutiveSummary(workspace),
@@ -16,37 +19,87 @@ function buildExecutiveSummary(ws: WorkspaceState): NarrativeSection {
   const crawl = ws.captures.crawl.latest?.data as any;
   const ga4 = ws.captures.ga4.latest?.data as any;
   const gsc = ws.captures.gsc.latest?.data as any;
+  const bt = ws.captures['broad-traffic']?.latest?.data as any;
+  const bilingual = ws.captures.bilingual.latest?.data as any;
 
-  const parts: string[] = [];
-
-  parts.push(`This diagnostic report evaluates the website for ${ws.hostname}, assessing its technical performance, content quality, search visibility, and user engagement.`);
+  // Collect findings scored by severity so we can lead with the worst one
+  interface Finding { severity: number; sentence: string; }
+  const findings: Finding[] = [];
 
   if (lh) {
     const perf = Math.round((lh.categories?.performance?.score ?? 0) * 100);
+    const tti = (lh.audits?.['interactive']?.numericValue ?? 0) / 1000;
+    const lcp = (lh.audits?.['largest-contentful-paint']?.numericValue ?? 0) / 1000;
+    const ttfb = (lh.audits?.['server-response-time']?.numericValue ?? 0);
+
+    if (tti > 15) {
+      findings.push({ severity: 10, sentence: `The site takes ${tti.toFixed(1)} seconds to become usable on a phone — visitors are gone long before it finishes loading.` });
+    } else if (tti > 5) {
+      findings.push({ severity: 8, sentence: `Mobile load time is ${tti.toFixed(1)} seconds to interactive — well above the 3.8-second threshold where users abandon a page.` });
+    } else if (perf < 50) {
+      findings.push({ severity: 7, sentence: `Performance scores ${perf}/100 — the site is measurably slow and losing visitors before they engage.` });
+    }
+
+    if (lcp > 6) {
+      findings.push({ severity: 9, sentence: `The main content takes ${lcp.toFixed(1)} seconds to appear — Google's threshold is 2.5 seconds.` });
+    }
+
+    if (ttfb > 2000) {
+      findings.push({ severity: 6, sentence: `The server itself takes ${(ttfb/1000).toFixed(1)} seconds to respond before the browser can even start loading — a hosting-level problem.` });
+    }
+
     const seo = Math.round((lh.categories?.seo?.score ?? 0) * 100);
-    parts.push(`The site scores ${perf}/100 on performance and ${seo}/100 on SEO according to Lighthouse analysis.`);
+    const a11y = Math.round((lh.categories?.accessibility?.score ?? 0) * 100);
+    if (seo < 70) findings.push({ severity: 5, sentence: `SEO scores ${seo}/100 — basic discoverability problems are preventing the site from ranking.` });
+    if (a11y < 60) findings.push({ severity: 4, sentence: `Accessibility scores ${a11y}/100 — a significant portion of users with disabilities cannot use the site.` });
   }
 
   if (crawl) {
-    const pages = crawl.pagesCrawled ?? 0;
     const broken = crawl.brokenLinks?.length ?? 0;
-    parts.push(`A crawl of ${pages} pages revealed ${broken} broken link(s) and assessed content quality across the site.`);
+    if (broken > 5) findings.push({ severity: 5, sentence: `${broken} broken links were found across the site.` });
+    const missingH1 = (crawl.totalPages || []).filter((p: any) => !p.headings?.[0]).length;
+    if (missingH1 > 3) findings.push({ severity: 3, sentence: `${missingH1} pages are missing H1 headings, which weakens search relevance on every affected page.` });
   }
 
+  const biPct: number = bilingual?.coverage?.coveragePercent ?? null;
+  if (biPct !== null && biPct < 20) {
+    findings.push({ severity: 4, sentence: `The site has ${biPct === 0 ? 'no Spanish version' : `only ${biPct}% Spanish coverage`}, leaving a significant portion of the potential audience unreachable.` });
+  }
+
+  const reviewCount: number = bt?.gbp?.reviewCount ?? null;
+  const rating: number = bt?.gbp?.rating ?? null;
+  if (reviewCount !== null && reviewCount < 15) {
+    findings.push({ severity: 3, sentence: `Only ${reviewCount} Google review${reviewCount !== 1 ? 's' : ''} — not enough social proof to compete with established local businesses.` });
+  } else if (rating !== null && rating < 4.0) {
+    findings.push({ severity: 4, sentence: `A ${rating}-star Google rating is actively discouraging new visitors before they reach the site.` });
+  }
+
+  // Sort by severity descending
+  findings.sort((a, b) => b.severity - a.severity);
+
+  const parts: string[] = [];
+
+  if (findings.length > 0) {
+    // Lead with the worst finding
+    parts.push(findings[0].sentence);
+    // Add up to 2 more supporting findings
+    findings.slice(1, 3).forEach(f => parts.push(f.sentence));
+  }
+
+  // Add traffic context if available
   if (ga4?.rows) {
     let totalSessions = 0;
-    for (const row of ga4.rows) {
-      totalSessions += parseInt(row.metricValues?.[0]?.value ?? '0', 10);
-    }
-    parts.push(`Over the last 30 days, the site received ${totalSessions.toLocaleString()} sessions.`);
+    for (const row of ga4.rows) totalSessions += parseInt(row.metricValues?.[0]?.value ?? '0', 10);
+    if (totalSessions > 0) parts.push(`Over the last 30 days the site received ${totalSessions.toLocaleString()} sessions.`);
+  } else if (gsc?.rows) {
+    let totalClicks = 0;
+    for (const row of gsc.rows) totalClicks += row.clicks ?? parseInt(row.metricValues?.[0]?.value ?? '0', 10);
+    if (totalClicks > 0) parts.push(`Google Search delivered ${totalClicks.toLocaleString()} clicks over the last 30 days.`);
   }
 
-  if (gsc?.rows) {
-    let totalClicks = 0;
-    for (const row of gsc.rows) {
-      totalClicks += row.clicks ?? parseInt(row.metricValues?.[0]?.value ?? '0', 10);
-    }
-    parts.push(`Google Search delivered ${totalClicks.toLocaleString()} clicks during the same period.`);
+  // Fallback
+  if (parts.length === 0) {
+    parts.push(`This report covers the technical health, content quality, and search visibility of ${ws.hostname}.`);
   }
 
   return {
@@ -88,8 +141,8 @@ function buildTechnicalHealth(ws: WorkspaceState): NarrativeSection {
     const pages: any[] = crawl.totalPages ?? [];
     const canonicalMismatches = pages.filter(p => p.canonicalMismatch).length;
     const pagesWithErrors = pages.filter(p => p.consoleErrors?.length > 0).length;
-    if (canonicalMismatches > 0) parts.push(`${canonicalMismatches} page(s) have a canonical URL mismatch, which can cause duplicate content signals in search.`);
-    if (pagesWithErrors > 0) parts.push(`${pagesWithErrors} page(s) logged JavaScript console errors during crawl.`);
+    if (canonicalMismatches > 0) parts.push(`${pl(canonicalMismatches, 'page')} have a canonical URL mismatch, which can cause duplicate content signals in search.`);
+    if (pagesWithErrors > 0) parts.push(`${pl(pagesWithErrors, 'page')} logged JavaScript console errors during crawl.`);
   }
 
   const opportunities: string[] = [];
@@ -109,6 +162,20 @@ function buildTechnicalHealth(ws: WorkspaceState): NarrativeSection {
     const names = techStack.map((t: any) => t.title ?? t.name).filter(Boolean);
     if (names.length > 0) {
       parts.push(`Detected technologies: ${names.join(', ')}.`);
+    }
+    const ABANDONED = [
+      { match: /jquery mobile/i, note: 'jQuery Mobile (abandoned ~2014 — signals a very old codebase)' },
+      { match: /jquery ui/i, note: 'jQuery UI (deprecated — modern alternatives recommended)' },
+      { match: /mootools/i, note: 'MooTools (effectively abandoned — last major release 2016)' },
+      { match: /prototype\.?js/i, note: 'Prototype.js (abandoned — last release 2015)' },
+    ];
+    const flags: string[] = [];
+    names.forEach((n: string) => {
+      const hit = ABANDONED.find(a => a.match.test(n));
+      if (hit) flags.push(hit.note);
+    });
+    if (flags.length > 0) {
+      parts.push(`Notable concern: the site is running outdated technology — ${flags.join('; ')}. This is a strong indicator the codebase has not been meaningfully updated in years.`);
     }
   }
 
@@ -132,13 +199,13 @@ function buildContentSEO(ws: WorkspaceState): NarrativeSection {
     const missingOg = pages.filter(p => !p.ogTags?.title && !p.ogTags?.image).length;
 
     parts.push(`The site contains ${pages.length} crawled pages.`);
-    if (missingMeta > 0) parts.push(`${missingMeta} page(s) are missing meta descriptions.`);
-    if (missingH1 > 0) parts.push(`${missingH1} page(s) are missing H1 headings.`);
-    if (broken > 0) parts.push(`${broken} broken link(s) were detected, which hurt SEO and user trust.`);
-    if (thinPages > 0) parts.push(`${thinPages} page(s) have thin content (under 300 words), which weakens search relevance.`);
-    if (duplicatePages > 0) parts.push(`${duplicatePages} page(s) appear to duplicate content from another page on the site.`);
-    if (totalMissingAlt > 0) parts.push(`${totalMissingAlt} image(s) across the site are missing alt text, affecting accessibility and image SEO.`);
-    if (missingOg > 0) parts.push(`${missingOg} page(s) lack Open Graph tags, which reduces click-through when shared on social media.`);
+    if (missingMeta > 0) parts.push(`${pl(missingMeta, 'page')} are missing meta descriptions.`);
+    if (missingH1 > 0) parts.push(`${pl(missingH1, 'page')} are missing H1 headings.`);
+    if (broken > 0) parts.push(`${pl(broken, 'broken link')} were detected, which hurt SEO and user trust.`);
+    if (thinPages > 0) parts.push(`${pl(thinPages, 'page')} have thin content (under 300 words), which weakens search relevance.`);
+    if (duplicatePages > 0) parts.push(`${pl(duplicatePages, 'page')} appear to duplicate content from another page on the site.`);
+    if (totalMissingAlt > 0) parts.push(`${pl(totalMissingAlt, 'image')} across the site are missing alt text, affecting accessibility and image SEO.`);
+    if (missingOg > 0) parts.push(`${pl(missingOg, 'page')} lack Open Graph tags, which reduces click-through when shared on social media.`);
 
     const homepage = pages[0];
     if (homepage?.aeoAssessment) {
@@ -169,7 +236,7 @@ function buildContentSEO(ws: WorkspaceState): NarrativeSection {
       return pos >= 11 && pos <= 20;
     });
     if (almostRanking.length > 0) {
-      parts.push(`${almostRanking.length} page(s) are ranking in positions 11-20 — close to the first page and worth targeting for improvement.`);
+      parts.push(`${pl(almostRanking.length, 'page')} are ranking in positions 11-20 — close to the first page and worth targeting for improvement.`);
     }
   }
 
@@ -183,7 +250,7 @@ function buildContentSEO(ws: WorkspaceState): NarrativeSection {
 function buildTrafficEngagement(ws: WorkspaceState): NarrativeSection {
   const ga4 = ws.captures.ga4.latest?.data as any;
   if (!ga4?.rows) {
-    return { id: 'traffic-engagement', title: 'Traffic & Engagement', generatedProse: 'GA4 data is not available. Run the GA4 capture to generate this section.' };
+    return { id: 'traffic-engagement', title: 'Traffic & Engagement', generatedProse: 'Traffic & engagement data pending.' };
   }
 
   const rows: any[] = ga4.rows;
@@ -208,7 +275,7 @@ function buildTrafficEngagement(ws: WorkspaceState): NarrativeSection {
   parts.push(`Over the last 30 days, the site received ${totalSessions.toLocaleString()} sessions with a ${(avgBounce * 100).toFixed(1)}% bounce rate and ${avgDuration.toFixed(0)}s average session duration.`);
 
   if (totalConversions > 0) {
-    parts.push(`${totalConversions.toLocaleString()} conversion(s) were recorded.`);
+    parts.push(`${pl(totalConversions, 'conversion')} were recorded.`);
   } else {
     parts.push('No conversions were recorded during this period.');
   }
@@ -237,7 +304,7 @@ function buildBilingualPresence(ws: WorkspaceState): NarrativeSection {
   const { coverage, gaps, parity, limitations } = bilingual;
   const parts: string[] = [];
 
-  parts.push(`The site has ${coverage.englishPages} English page(s) and ${coverage.spanishPages} Spanish page(s), giving a ${coverage.coveragePercent}% Spanish coverage rate.`);
+  parts.push(`The site has ${pl(coverage.englishPages, 'English page')} and ${pl(coverage.spanishPages, 'Spanish page')}, giving a ${coverage.coveragePercent}% Spanish coverage rate.`);
 
   if (ga4?.languageGroups?.rows) {
     let totalSessions = 0;
@@ -259,18 +326,14 @@ function buildBilingualPresence(ws: WorkspaceState): NarrativeSection {
 
   const missingGaps = gaps?.filter((g: any) => g.status === 'missing') ?? [];
   if (missingGaps.length > 0) {
-    parts.push(`${missingGaps.length} English page(s) have no Spanish equivalent.`);
+    parts.push(`${pl(missingGaps.length, 'English page')} have no Spanish equivalent.`);
   } else if (coverage.spanishPages > 0) {
     parts.push('All English pages have corresponding Spanish translations.');
   }
 
   const thinPages = parity?.filter((p: any) => p.parityPercent < 70) ?? [];
   if (thinPages.length > 0) {
-    parts.push(`${thinPages.length} Spanish page(s) have less than 70% of the content of their English counterpart, suggesting incomplete translations.`);
-  }
-
-  if (limitations?.length > 0) {
-    parts.push(`Note: ${limitations[0]}`);
+    parts.push(`${pl(thinPages.length, 'Spanish page')} have less than 70% of the content of their English counterpart, suggesting incomplete translations.`);
   }
 
   return { id: 'bilingual-presence', title: 'Bilingual Presence', generatedProse: parts.join(' ') };
@@ -281,35 +344,95 @@ function buildOpportunity(ws: WorkspaceState): NarrativeSection {
   const crawl = ws.captures.crawl.latest?.data as any;
   const ga4 = ws.captures.ga4.latest?.data as any;
   const bilingual = ws.captures.bilingual.latest?.data as any;
+  const bt = ws.captures['broad-traffic']?.latest?.data as any;
 
   const parts: string[] = [];
 
-  parts.push('Based on this diagnostic, there is a clear opportunity to improve this business\'s digital presence.');
+  // Pull real business context from GBP
+  const bizName: string = bt?.gbp?.businessName || null;
+  const category: string = bt?.gbp?.category || null;
+  const address: string = bt?.gbp?.address || null;
+  const reviewCount: number = bt?.gbp?.reviewCount ?? null;
+  const rating: number = bt?.gbp?.rating ?? null;
 
-  const issues: string[] = [];
-  if (lh) {
-    const perf = Math.round((lh.categories?.performance?.score ?? 0) * 100);
-    if (perf < 75) issues.push('slow loading speeds');
-  }
-  if (crawl?.brokenLinks?.length > 0) issues.push('broken links hurting credibility');
-  if (crawl?.totalPages?.[0]?.aeoAssessment?.isAEOReady === false) issues.push('invisible to AI search engines');
-  if (ga4?.rows) {
-    let totalSessions = 0;
-    let weightedBounce = 0;
-    for (const row of ga4.rows) {
-      const s = parseInt(row.metricValues?.[0]?.value ?? '0', 10);
-      totalSessions += s;
-      weightedBounce += parseFloat(row.metricValues?.[1]?.value ?? '0') * s;
+  // Parse city from address (e.g. "123 Main St, Union City, NJ 07087")
+  const cityMatch = address?.match(/,\s*([^,]+),\s*[A-Z]{2}/);
+  const city = cityMatch ? cityMatch[1].trim() : null;
+
+  // Industry framing
+  const industryMap: Record<string, { audience: string; action: string }> = {
+    'dentist':    { audience: 'new patients',   action: 'book an appointment' },
+    'dental':     { audience: 'new patients',   action: 'book an appointment' },
+    'doctor':     { audience: 'new patients',   action: 'schedule a visit' },
+    'medical':    { audience: 'new patients',   action: 'schedule a visit' },
+    'lawyer':     { audience: 'potential clients', action: 'reach out' },
+    'attorney':   { audience: 'potential clients', action: 'reach out' },
+    'law':        { audience: 'potential clients', action: 'reach out' },
+    'restaurant': { audience: 'hungry customers', action: 'find you and show up' },
+    'salon':      { audience: 'new clients',    action: 'book a service' },
+    'spa':        { audience: 'new clients',    action: 'book a service' },
+    'plumber':    { audience: 'homeowners',     action: 'call you' },
+    'electrician':{ audience: 'homeowners',     action: 'call you' },
+    'contractor': { audience: 'homeowners',     action: 'request a quote' },
+  };
+  const catLower = category?.toLowerCase() || '';
+  const industry = Object.entries(industryMap).find(([k]) => catLower.includes(k))?.[1]
+    || { audience: 'potential customers', action: 'contact the business' };
+
+  const nameRef = bizName || (category ? `this ${category.toLowerCase()}` : 'this business');
+  const locationRef = city ? ` in ${city}` : '';
+
+  // Performance — lead with the most damning number
+  const perf = lh ? Math.round((lh.categories?.performance?.score ?? 0) * 100) : null;
+  const tti = lh ? ((lh.audits?.['interactive']?.numericValue ?? 0) / 1000).toFixed(1) : null;
+  const lcp = lh ? ((lh.audits?.['largest-contentful-paint']?.numericValue ?? 0) / 1000).toFixed(1) : null;
+
+  if (perf !== null && perf < 50) {
+    if (tti && parseFloat(tti) > 10) {
+      parts.push(`${nameRef} has a performance score of ${perf}/100 — and the site takes ${tti} seconds before it's usable on a phone. By that point, the ${industry.audience} looking to ${industry.action} have already gone somewhere else.`);
+    } else if (lcp && parseFloat(lcp) > 4) {
+      parts.push(`${nameRef} scores ${perf}/100 on performance. The main content takes ${lcp} seconds to appear on mobile — most ${industry.audience}${locationRef} will leave before they see anything.`);
+    } else {
+      parts.push(`${nameRef} scores ${perf}/100 on performance${locationRef}. A slow site costs ${industry.audience} — they leave before they have a chance to ${industry.action}.`);
     }
-    if (totalSessions > 0 && (weightedBounce / totalSessions) > 0.65) issues.push('high bounce rates losing potential customers');
-  }
-  if (bilingual?.coverage?.coveragePercent < 50) issues.push('untapped Spanish-speaking market');
-
-  if (issues.length > 0) {
-    parts.push(`The current site suffers from ${issues.join(', ')}.`);
   }
 
-  parts.push('A professionally redesigned website addressing these findings would strengthen the business\'s online presence, improve search rankings, and convert more visitors into customers.');
+  // Bilingual — frame as customer loss, not gap
+  const biPct: number = bilingual?.coverage?.coveragePercent ?? null;
+  if (biPct !== null && biPct < 30) {
+    if (city) {
+      parts.push(`There is a Spanish-speaking community${locationRef} that cannot find ${nameRef} online — the site has ${biPct === 0 ? 'no Spanish pages at all' : `only ${biPct}% Spanish coverage`}. Those are ${industry.audience} who are actively being handed to a competitor.`);
+    } else {
+      parts.push(`The site has ${biPct === 0 ? 'no Spanish version' : `only ${biPct}% Spanish coverage`}. A significant portion of potential ${industry.audience} never sees this business online.`);
+    }
+  }
+
+  // GBP trust signal — low reviews
+  if (reviewCount !== null && reviewCount < 20) {
+    const ratingNote = rating !== null && rating < 4.0
+      ? ` and a ${rating}-star average`
+      : '';
+    parts.push(`With only ${reviewCount} Google review${reviewCount !== 1 ? 's' : ''}${ratingNote}, ${nameRef} has almost no social proof online. ${industry.audience.charAt(0).toUpperCase() + industry.audience.slice(1)} searching${locationRef} will see competitors with hundreds of reviews first.`);
+  } else if (rating !== null && rating < 4.0) {
+    parts.push(`A ${rating}-star rating on Google will cost ${nameRef} customers before they ever visit the site. Most ${industry.audience} filter out anything below 4 stars.`);
+  }
+
+  // AEO — AI search invisibility
+  const aeoReady = crawl?.totalPages?.[0]?.aeoAssessment?.isAEOReady;
+  if (aeoReady === false) {
+    parts.push(`The site is also invisible to AI-powered search — when someone asks ChatGPT or Google's AI for a ${category?.toLowerCase() || 'local business'}${locationRef}, ${nameRef} won't appear because the structured data required to surface in those answers is missing.`);
+  }
+
+  // Broken links — credibility
+  const brokenCount: number = crawl?.brokenLinks?.length ?? 0;
+  if (brokenCount > 5) {
+    parts.push(`${brokenCount} broken links across the site signal to both visitors and search engines that the site is unmaintained.`);
+  }
+
+  // Fallback if nothing fired
+  if (parts.length === 0) {
+    parts.push(`${nameRef} has room to improve its digital presence${locationRef}. Addressing the findings in this report would strengthen search visibility and help more ${industry.audience} find and choose this business.`);
+  }
 
   return { id: 'the-opportunity', title: 'The Opportunity', generatedProse: parts.join(' ') };
 }
