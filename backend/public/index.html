@@ -2464,9 +2464,51 @@
     const crawl = captureData('crawl');
     if (!crawl) return renderEmptyState("crawler-readability-data", "Run Site Crawler first.");
     const grid = document.getElementById("crawler-readability-data");
-    transformCrawlerReadability(crawl).forEach(r => {
+    const pages = transformCrawlerReadability(crawl);
+    if (!pages.length) return renderEmptyState("crawler-readability-data", "No readability data found.");
+
+    // Plain-English explainer
+    const explainer = document.createElement("div"); explainer.className = "data-card";
+    explainer.style.cssText = "background:rgba(59,130,246,0.07);border-left:4px solid var(--accent)";
+    explainer.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:8px;font-weight:700">What these numbers mean</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;color:var(--ink-2);line-height:1.6">
+        <div><strong style="color:var(--ink)">Flesch Reading Ease</strong> — scored 0–100. Higher is easier. A score of 60–70 reads like a newspaper. Below 50 reads like a legal document. Local business websites should aim for 60+.</div>
+        <div><strong style="color:var(--ink)">Grade Level</strong> — the US school grade needed to understand the text. Grade 8 is the sweet spot for a general audience. Above grade 10 and you're writing for a college classroom, not a customer.</div>
+      </div>`;
+    grid.appendChild(explainer);
+
+    // Call-out: how many pages need work
+    const hardPages = pages.filter(p => p.grade > 10);
+    const notReady = pages.filter(p => !p.voiceReady);
+    if (hardPages.length > 0 || notReady.length > 0) {
+      const callout = document.createElement("div"); callout.className = "data-card";
+      callout.style.cssText = "border-left:4px solid var(--warn);background:rgba(245,158,11,0.07)";
+      callout.innerHTML = `
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--warn);margin-bottom:8px;font-weight:700">⚡ What needs work</div>
+        <div style="font-size:14px;color:var(--ink);line-height:1.7">
+          ${hardPages.length > 0 ? `<div><strong>${hardPages.length} of ${pages.length} page${pages.length !== 1 ? 's' : ''}</strong> are written above grade 10 — too complex for a general audience. Target grade 8 or below. Shorter sentences, simpler words.</div>` : ''}
+          ${notReady.length > 0 ? `<div style="margin-top:6px"><strong>${notReady.length} of ${pages.length} page${pages.length !== 1 ? 's' : ''}</strong> are not voice-search ready. Voice assistants favour conversational, low-grade content — these pages won't rank for spoken queries.</div>` : ''}
+        </div>`;
+      grid.appendChild(callout);
+    } else {
+      const good = document.createElement("div"); good.className = "data-card";
+      good.style.cssText = "border-left:4px solid var(--good)";
+      good.innerHTML = `<div style="font-size:13px;color:var(--good);font-weight:600">✓ All pages are written at an accessible grade level and are voice-search ready.</div>`;
+      grid.appendChild(good);
+    }
+
+    // Per-page rows
+    pages.forEach(r => {
+      const gradeColor = r.grade <= 8 ? 'var(--good)' : r.grade <= 10 ? 'var(--warn)' : 'var(--bad)';
+      const fleschColor = r.flesch >= 60 ? 'var(--good)' : r.flesch >= 40 ? 'var(--warn)' : 'var(--bad)';
       const card = document.createElement("div"); card.className = "data-card";
-      card.innerHTML = `<div style="display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center"><div style="font-family:var(--mono); font-size:13px; color:var(--accent)">${r.url}</div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Flesch</div><div style="font-weight:700;color:var(--ink)">${r.flesch}</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Grade</div><div style="font-weight:700;color:var(--ink)">${r.grade}</div></div><div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:${r.voiceReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${r.voiceReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase">${r.voiceReady ? 'Voice Ready' : 'Not Ready'}</span></div></div>`;
+      card.innerHTML = `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:16px;align-items:center">
+        <div style="font-family:var(--mono);font-size:13px;color:var(--accent)">${r.url}</div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Flesch</div><div style="font-weight:700;color:${fleschColor}">${r.flesch}</div></div>
+        <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Grade</div><div style="font-weight:700;color:${gradeColor}">${r.grade}</div></div>
+        <div style="text-align:right"><span style="display:inline-block;padding:4px 10px;border-radius:6px;background:${r.voiceReady ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'};color:${r.voiceReady ? 'var(--good)' : 'var(--bad)'};font-size:10px;font-weight:700;text-transform:uppercase">${r.voiceReady ? 'Voice Ready' : 'Not Ready'}</span></div>
+      </div>`;
       grid.appendChild(card);
     });
   }
