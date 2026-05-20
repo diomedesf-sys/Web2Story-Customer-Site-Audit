@@ -2995,8 +2995,39 @@
     if (!bi) return renderEmptyState("bilingual-coverage-data", "Run Bilingual Audit first.");
     const grid = document.getElementById("bilingual-coverage-data");
     const c = transformBilingualCoverage(bi);
+
+    // Opportunity framing block
+    const pct = c.coveragePct;
+    const notes = STATE.workspace?.notes?.trim() || '';
+    let pitchColor, pitchIcon, pitchHeadline, pitchBody;
+    if (pct === 0) {
+      pitchColor = 'var(--bad)';
+      pitchIcon = '⚠️';
+      pitchHeadline = 'Zero Spanish pages detected — this is the pitch.';
+      pitchBody = `Every one of this site's ${c.totalPages} pages is English-only. Any Spanish-speaking visitor who lands here has no path forward in their language. That's not a minor gap — it's an entire audience locked out.${notes ? `<br><br><span style="color:var(--muted);font-style:italic">Context: ${notes}</span>` : ''}`;
+    } else if (pct < 50) {
+      pitchColor = 'var(--warn)';
+      pitchIcon = '⚡';
+      pitchHeadline = `${pct}% Spanish coverage — more than halfway to losing the audience.`;
+      pitchBody = `${c.spanishPages} of ${c.totalPages} pages have Spanish versions. The other ${c.totalPages - c.spanishPages} are English-only walls. Spanish-speaking visitors hitting those pages have nowhere to go.${notes ? `<br><br><span style="color:var(--muted);font-style:italic">Context: ${notes}</span>` : ''}`;
+    } else {
+      pitchColor = 'var(--good)';
+      pitchIcon = '✓';
+      pitchHeadline = `${pct}% Spanish coverage — strong bilingual foundation.`;
+      pitchBody = `${c.spanishPages} of ${c.totalPages} pages are available in Spanish. Closing the remaining ${c.totalPages - c.spanishPages}-page gap would complete the experience for Spanish-speaking visitors.${notes ? `<br><br><span style="color:var(--muted);font-style:italic">Context: ${notes}</span>` : ''}`;
+    }
+
+    const pitch = document.createElement("div"); pitch.className = "data-card";
+    pitch.style.cssText = `border-left: 4px solid ${pitchColor}; background: rgba(15,23,42,0.6)`;
+    pitch.innerHTML = `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:${pitchColor};margin-bottom:8px;font-weight:700">${pitchIcon} The Opportunity</div>
+      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:8px">${pitchHeadline}</div>
+      <div style="font-size:13px;color:var(--ink-2);line-height:1.6">${pitchBody}</div>`;
+    grid.appendChild(pitch);
+
+    // Stats card
     const card = document.createElement("div"); card.className = "data-card summary-card";
-    card.innerHTML = `<div class="kv"><div class="k">Total pages</div><div class="v">${c.totalPages}</div></div><div class="kv"><div class="k">English pages</div><div class="v">${c.englishPages}</div></div><div class="kv"><div class="k">Spanish pages</div><div class="v">${c.spanishPages}</div></div><div class="kv"><div class="k">Coverage %</div><div class="v" style="color:var(--warn);font-size:20px">${c.coveragePct}%</div></div>`;
+    card.innerHTML = `<div class="kv"><div class="k">Total pages</div><div class="v">${c.totalPages}</div></div><div class="kv"><div class="k">English pages</div><div class="v">${c.englishPages}</div></div><div class="kv"><div class="k">Spanish pages</div><div class="v">${c.spanishPages}</div></div><div class="kv"><div class="k">Coverage %</div><div class="v" style="color:${pct >= 50 ? 'var(--good)' : pct > 0 ? 'var(--warn)' : 'var(--bad)'};font-size:20px">${c.coveragePct}%</div></div>`;
     grid.appendChild(card);
   }
 
