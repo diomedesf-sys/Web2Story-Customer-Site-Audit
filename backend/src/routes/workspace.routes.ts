@@ -110,6 +110,25 @@ router.put('/:hostname/recommendations', async (req: Request, res: Response) => 
   }
 });
 
+// Save operator-edited capture data (generic — used by the file editor)
+router.put('/:hostname/capture/:tool', async (req: Request, res: Response) => {
+  try {
+    const { hostname, tool } = req.params;
+    if (!VALID_TOOLS.includes(tool as CaptureToolName)) {
+      return res.status(400).json({ success: false, error: `Invalid tool: ${tool}` });
+    }
+    const { data } = req.body;
+    if (data === undefined) {
+      return res.status(400).json({ success: false, error: 'data is required' });
+    }
+    const savedPath = await saveCapture(hostname, tool as CaptureToolName, data);
+    res.json({ success: true, hostname, tool, path: savedPath });
+  } catch (error: any) {
+    console.error('[workspace/capture/save] Error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Save operator-edited narrative sections
 router.put('/:hostname/narrative', async (req: Request, res: Response) => {
   try {
