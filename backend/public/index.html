@@ -1504,7 +1504,8 @@
           <p class="lede" id="package-desc" style="margin-top:4px">Select files to include, then build &amp; download.</p>
         </div>
         <div style="display:flex; gap:8px">
-          <button class="btn primary sm" onclick="alert('Build & download .zip')">Build &amp; Download</button>
+          <button class="btn ghost sm" onclick="packagePreview()">Preview Files</button>
+          <button class="btn primary sm" onclick="packageDownload()">Download .zip</button>
         </div>
       </div>
 
@@ -3560,6 +3561,22 @@
       else if (/null/.test(m)) cls = 'json-bool';
       return `<span class="${cls}">${m}</span>`;
     });
+  }
+
+  function packagePreview() {
+    const filesEl = document.getElementById("package-files-list");
+    if (!filesEl) return;
+    renderPackageBuilder();
+    filesEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const rows = filesEl.querySelectorAll('.package-file-row');
+    showToast(`${rows.length} file${rows.length !== 1 ? 's' : ''} in this package`);
+    filesEl.style.outline = '2px solid var(--accent)';
+    filesEl.style.borderRadius = '8px';
+    setTimeout(() => { filesEl.style.outline = ''; filesEl.style.borderRadius = ''; }, 1800);
+  }
+
+  function packageDownload() {
+    showToast('Zip assembly not yet built — coming next', true);
   }
 
   function renderPackageBuilder() {
