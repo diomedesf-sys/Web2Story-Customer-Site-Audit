@@ -1964,9 +1964,10 @@
       action: r.action, source: r.source, impact: impMap[r.impact] || r.impact,
       effort: impMap[r.effort] || r.effort, notes: r.notes || '', id: r.id, included: r.included
     });
-    const quickwins = recs.filter(r => r.impact === 'high' && r.effort === 'low').map(toRender);
+    const isQuickWin = r => ['high','medium'].includes(r.impact) && r.effort === 'low';
+    const quickwins = recs.filter(isQuickWin).map(toRender);
     const technical = recs.filter(r => r.source === 'lighthouse').map(toRender);
-    const content = recs.filter(r => ['crawler','gsc'].includes(r.source) && !(r.impact === 'high' && r.effort === 'low')).map(toRender);
+    const content = recs.filter(r => ['crawler','gsc'].includes(r.source) && !isQuickWin(r)).map(toRender);
     const engagement = recs.filter(r => r.source === 'ga4').map(toRender);
     const bilingual = recs.filter(r => r.source === 'bilingual' || r.category === 'bilingual').map(toRender);
     return { quickwins, technical, content, engagement, bilingual };
