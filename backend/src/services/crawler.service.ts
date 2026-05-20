@@ -243,7 +243,8 @@ export async function crawlSite(
 
   async function takeScreenshot(targetUrl: string) {
     const pathname = new URL(targetUrl).pathname;
-    const screenshotPath = path.join(screenshotsDir, `screenshot-${pathname.replace(/\//g, '-')}.png`);
+    const slug = pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
+    const screenshotPath = path.join(screenshotsDir, `screenshot-${slug}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
     screenshottedUrls.add(targetUrl);
     screenshotPaths.push(screenshotPath);
@@ -367,7 +368,7 @@ export async function crawlSite(
       });
       const mobilePage = await mobileContext.newPage();
       await mobilePage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
-      const mobilePath = path.join(screenshotsDir, 'screenshot--mobile.png');
+      const mobilePath = path.join(screenshotsDir, 'screenshot-home-mobile.png');
       await mobilePage.screenshot({ path: mobilePath, fullPage: true });
       screenshotPaths.push(mobilePath);
       await mobileContext.close();
