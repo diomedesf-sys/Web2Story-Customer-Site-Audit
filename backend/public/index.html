@@ -1471,10 +1471,10 @@
           <p class="lede" id="editor-meta" style="margin-top:4px">JSON · 0 KB · Last modified —</p>
         </div>
         <div style="display:flex; gap:8px">
-          <button class="btn sm ghost" onclick="alert('reset to last saved')">Reset</button>
-          <button class="btn sm" onclick="alert('copy to clipboard')">Copy</button>
-          <button class="btn sm" onclick="alert('download file')">Download</button>
-          <button class="btn primary sm" onclick="alert('save changes')">Save</button>
+          <button class="btn sm ghost" onclick="editorReset()">Reset</button>
+          <button class="btn sm" onclick="editorCopy()">Copy</button>
+          <button class="btn sm" onclick="editorDownload()">Download</button>
+          <button class="btn primary sm" onclick="editorSave()">Save</button>
         </div>
       </div>
 
@@ -2490,17 +2490,55 @@
     if (!grid) return;
     const bt = captureData('broad-traffic');
     if (!bt) return renderEmptyState("broad-traffic-overview-data", "Run Public Pulse to capture data.");
-    const metricCard = (name, value, sub) => {
+
+    const scoreColor = s => s >= 90 ? 'var(--good)' : s >= 50 ? '#f59e0b' : 'var(--bad)';
+    const scoreLabel = s => s >= 90 ? 'Good' : s >= 50 ? 'Fair' : s >= 25 ? 'Poor' : 'Critical';
+    const cruxColor = cat => cat === 'FAST' ? 'var(--good)' : cat === 'AVERAGE' ? '#f59e0b' : 'var(--bad)';
+    const cruxLabel = cat => cat === 'FAST' ? 'Fast' : cat === 'AVERAGE' ? 'Needs work' : 'Slow';
+
+    const metricCard = (name, value, sub, color) => {
       const c = document.createElement("div"); c.className = "data-card metric-card";
-      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value">${value}</span></div>`;
+      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value" style="${color ? `color:${color}` : ''}">${value}</span></div>`;
       grid.appendChild(c);
     };
-    if (bt.domainAge) {
-      metricCard("Domain age", `${bt.domainAge.ageYears} yr${bt.domainAge.ageYears !== 1 ? 's' : ''}`, bt.domainAge.registrationDate?.slice(0, 10) || '');
+
+    // PSI scores
+    if (bt.psi) {
+      const p = bt.psi;
+      metricCard("Performance", p.performanceScore, scoreLabel(p.performanceScore), scoreColor(p.performanceScore));
+      metricCard("SEO", p.seoScore, scoreLabel(p.seoScore), scoreColor(p.seoScore));
+      metricCard("Accessibility", p.accessibilityScore, scoreLabel(p.accessibilityScore), scoreColor(p.accessibilityScore));
+      metricCard("Best Practices", p.bestPracticesScore, scoreLabel(p.bestPracticesScore), scoreColor(p.bestPracticesScore));
+
+      // CRuX field data
+      if (p.crux) {
+        const c = p.crux;
+        const cruxCard = (name, m, unit) => {
+          if (!m) return;
+          const val = unit === 'ms' ? `${(m.percentile / 1000).toFixed(1)}s` : m.percentile.toFixed(3);
+          metricCard(name, val, `${cruxLabel(m.category)} · real-world p75`, cruxColor(m.category));
+        };
+        cruxCard("LCP (field)", c.lcp, 'ms');
+        cruxCard("FCP (field)", c.fcp, 'ms');
+        cruxCard("TTFB (field)", c.ttfb, 'ms');
+        cruxCard("INP (field)", c.inp, 'ms');
+        if (c.cls) metricCard("CLS (field)", c.cls.percentile.toFixed(3), `${cruxLabel(c.cls.category)} · real-world p75`, cruxColor(c.cls.category));
+      }
+    } else {
+      const note = document.createElement("div"); note.className = "data-card";
+      const hasKey = bt._status?.psi !== 'no-key';
+      note.innerHTML = `<div style="font-size:13px;color:var(--muted)">${hasKey ? 'PSI scores could not be fetched — check server logs.' : 'Add <code>GOOGLE_PSI_API_KEY</code> to <code>.env</code> to enable PageSpeed scores and real-world CRuX data.'}</div>`;
+      grid.appendChild(note);
     }
-    const note = document.createElement("div"); note.className = "data-card";
-    note.innerHTML = `<div style="color:var(--muted);font-size:13px">Traffic volume estimates (visits, bounce rate, sources) require CRuX API or SimilarWeb integration — not yet available. Run GA4 Open Books for authenticated traffic data.</div>`;
-    grid.appendChild(note);
+
+    // Domain age
+    if (bt.domainAge) {
+      metricCard("Domain age", `${bt.domainAge.ageYears} yr${bt.domainAge.ageYears !== 1 ? 's' : ''}`, `Registered ${bt.domainAge.registrationDate?.slice(0, 10) || ''}`, null);
+    }
+
+    const trafficNote = document.createElement("div"); trafficNote.className = "data-card";
+    trafficNote.innerHTML = `<div style="color:var(--muted);font-size:12px">Monthly visit volume and traffic source breakdown require Open Books (GA4) — run with client credentials.</div>`;
+    grid.appendChild(trafficNote);
   }
 
   function renderBroadTrafficGBP() {
@@ -2508,24 +2546,45 @@
     const grid = document.getElementById("broad-traffic-gbp-data");
     if (!grid) return;
     const bt = captureData('broad-traffic');
-    const metricCard = (name, value, sub) => {
+    const hostname = STATE.hostname || '';
+
+    const metricCard = (name, value, sub, color) => {
       const c = document.createElement("div"); c.className = "data-card metric-card";
-      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub}</div></div><div><span class="value">${value}</span></div>`;
+      c.innerHTML = `<div><div class="name">${name}</div><div class="unit">${sub || ''}</div></div><div><span class="value" style="${color ? `color:${color}` : ''}">${value}</span></div>`;
       grid.appendChild(c);
     };
-    if (bt?.domainAge) {
-      metricCard("Domain age", `${bt.domainAge.ageYears} yr${bt.domainAge.ageYears !== 1 ? 's' : ''}`, `Registered ${bt.domainAge.registrationDate?.slice(0, 10) || ''}`);
+
+    const gbp = bt?.gbp;
+    const hasGBPData = gbp && (gbp.rating !== null || gbp.businessName !== null);
+
+    if (hasGBPData) {
+      if (gbp.businessName) {
+        const nameCard = document.createElement("div"); nameCard.className = "data-card";
+        nameCard.innerHTML = `<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Business Name</div><div style="font-size:18px;font-weight:700;color:var(--ink)">${gbp.businessName}</div>${gbp.category ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">${gbp.category}</div>` : ''}`;
+        grid.appendChild(nameCard);
+      }
+      if (gbp.rating !== null) {
+        const ratingColor = gbp.rating >= 4.5 ? 'var(--good)' : gbp.rating >= 4.0 ? '#f59e0b' : 'var(--bad)';
+        metricCard("Google Rating", gbp.rating.toFixed(1) + ' ★', gbp.reviewCount ? `${gbp.reviewCount.toLocaleString()} reviews` : 'reviews', ratingColor);
+      }
+      if (gbp.address) metricCard("Address", gbp.address, '', null);
+      if (gbp.phone) metricCard("Phone", gbp.phone, '', null);
+      metricCard("Photos", gbp.hasPhotos ? '✓ Has photos' : '× No photos detected', '', gbp.hasPhotos ? 'var(--good)' : 'var(--muted)');
+    } else {
+      const pending = document.createElement("div"); pending.className = "data-card";
+      pending.innerHTML = `<div style="font-size:13px;color:var(--muted);margin-bottom:16px">${bt ? 'GBP data could not be scraped — business may not appear in Google Maps for this domain.' : 'Run Public Pulse to capture GBP data automatically.'}</div>`;
+      grid.appendChild(pending);
     }
-    const hostname = STATE.hostname || '';
-    const note = document.createElement("div"); note.className = "data-card";
-    note.innerHTML = `
-      <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:12px">Google Business Profile</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">GBP data (rating, reviews, category) requires Google Places API integration — not yet captured automatically.</div>
+
+    // Always show the manual check link
+    const manualCard = document.createElement("div"); manualCard.className = "data-card";
+    manualCard.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Verify or search manually</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <a href="https://www.google.com/maps/search/${encodeURIComponent(hostname)}" target="_blank" style="color:var(--accent);font-size:13px">→ Search Google Maps for this business</a>
-        <a href="https://business.google.com/reviews" target="_blank" style="color:var(--accent);font-size:13px">→ Google Business Profile dashboard</a>
+        <a href="https://www.google.com/maps/search/${encodeURIComponent(hostname)}" target="_blank" style="color:var(--accent);font-size:13px">→ Google Maps search for ${hostname}</a>
+        <a href="https://business.google.com/reviews" target="_blank" style="color:var(--accent);font-size:13px">→ GBP dashboard (owner login)</a>
       </div>`;
-    grid.appendChild(note);
+    grid.appendChild(manualCard);
   }
 
   function renderBroadTrafficAds() {
@@ -2586,6 +2645,12 @@
     }
     if (crawl?.totalPages) {
       metricCard("Pages crawled", crawl.totalPages.length, "internal links + sitemap", false);
+    }
+    if (bt?.indexedPages !== null && bt?.indexedPages !== undefined) {
+      const crawledCount = crawl?.pages?.length || 0;
+      const indexed = bt.indexedPages;
+      const gap = crawledCount > 0 && indexed < crawledCount;
+      metricCard("Google-indexed pages", indexed.toLocaleString(), crawledCount ? `${crawledCount} pages crawled — ${gap ? `${crawledCount - indexed} may be missing` : 'all accounted for'}` : 'from site: search', gap);
     }
     if (bt?.domainAge) {
       metricCard("Domain age", `${bt.domainAge.ageYears} yrs`, `Registered ${bt.domainAge.registrationDate?.slice(0, 10) || ''}`, false);
@@ -3346,6 +3411,66 @@
     renderPreview(raw, file.type, previewEl);
     // Live preview on input
     srcEl.oninput = () => renderPreview(srcEl.value, file.type, previewEl);
+  }
+
+  function editorReset() {
+    const file = EDITS_STATE.selectedFile;
+    if (!file) return;
+    const srcEl = document.getElementById('editor-source');
+    const previewEl = document.getElementById('editor-preview');
+    const raw = file.data ? JSON.stringify(file.data, null, 2) : '';
+    srcEl.value = raw;
+    renderPreview(raw, file.type, previewEl);
+    showToast('Reset to last saved');
+  }
+
+  async function editorCopy() {
+    const srcEl = document.getElementById('editor-source');
+    try {
+      await navigator.clipboard.writeText(srcEl.value);
+      showToast('Copied to clipboard');
+    } catch (e) {
+      showToast('Copy failed', true);
+    }
+  }
+
+  function editorDownload() {
+    const file = EDITS_STATE.selectedFile;
+    if (!file) return;
+    const srcEl = document.getElementById('editor-source');
+    const mimeType = file.type === 'json' ? 'application/json' : 'text/markdown';
+    const blob = new Blob([srcEl.value], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function editorSave() {
+    const file = EDITS_STATE.selectedFile;
+    if (!file || !STATE.hostname) return;
+    const srcEl = document.getElementById('editor-source');
+    const toolKey = file.id ? file.id.replace(/-json$/, '') : null;
+    if (!toolKey) { showToast('Cannot save this file type', true); return; }
+    let parsed;
+    try {
+      parsed = JSON.parse(srcEl.value);
+    } catch (e) {
+      showToast('Invalid JSON — fix errors before saving', true);
+      return;
+    }
+    try {
+      await api('PUT', `/api/workspace/${STATE.hostname}/capture/${toolKey}`, { data: parsed });
+      if (STATE.workspace?.captures?.[toolKey]?.latest) {
+        STATE.workspace.captures[toolKey].latest.data = parsed;
+        file.data = parsed;
+      }
+      showToast('Saved');
+    } catch (e) {
+      showToast('Save failed: ' + e.message, true);
+    }
   }
 
   function renderPreview(content, type, el) {
