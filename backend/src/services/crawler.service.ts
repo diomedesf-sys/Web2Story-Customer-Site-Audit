@@ -245,7 +245,7 @@ export async function crawlSite(
 
   async function takeScreenshot(targetUrl: string) {
     const pathname = new URL(targetUrl).pathname;
-    const slug = pathname.replace(/^\/|\/$/g, '').replace(/\//g, '-') || 'home';
+    const slug = (pathname.replace(/^\/+|\/+$/g, '').replace(/\//g, '-').replace(/^-+|-+$/g, '')) || 'home';
     const filename = `screenshot-${slug}.png`;
     const screenshotPath = path.join(screenshotsDir, filename);
     await page.screenshot({ path: screenshotPath, fullPage: true });

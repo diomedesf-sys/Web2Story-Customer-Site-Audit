@@ -746,6 +746,89 @@
     color: var(--muted);
   }
 
+  /* Diagnostic Report */
+  .diag-section { margin-bottom: 40px; }
+  .diag-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 2px solid var(--line); margin-bottom: 4px;
+  }
+  .diag-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .diag-section-count { font-size: 11px; color: var(--muted); }
+  .diag-empty { padding: 14px 0; color: var(--muted); font-size: 13px; font-style: italic; }
+  .diag-item {
+    padding: 20px 4px; border-bottom: 1px solid var(--line);
+    transition: background 0.15s;
+  }
+  .diag-item:last-child { border-bottom: none; }
+  .diag-item-top { display: flex; align-items: flex-start; gap: 14px; }
+  .diag-check-col { flex-shrink: 0; margin-top: 3px; }
+  .diag-check { width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent); }
+  .diag-content { flex: 1; min-width: 0; }
+  .diag-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    line-height: 1.4; margin-bottom: 10px;
+  }
+  .diag-check:checked ~ * .diag-title,
+  .diag-item.done .diag-title { text-decoration: line-through; color: var(--muted); }
+  .diag-term, .diag-why, .diag-fix {
+    font-size: 13px; line-height: 1.6; margin-bottom: 8px; color: var(--ink-2);
+  }
+  .diag-term strong, .diag-why strong, .diag-fix strong { color: var(--text); }
+  .diag-technical {
+    margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 10px;
+  }
+  .diag-technical summary {
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    list-style: none; display: flex; align-items: center; gap: 6px;
+  }
+  .diag-technical summary::before { content: '▶'; font-size: 9px; }
+  .diag-technical[open] summary::before { content: '▼'; }
+  .diag-technical-body { margin-top: 10px; padding: 12px; background: rgba(15,23,42,0.4); border-radius: 6px; }
+  .diag-tech-line {
+    font-family: var(--mono); font-size: 11px; color: var(--ink);
+    padding: 3px 0; word-break: break-all;
+  }
+  .diag-impact {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    flex-shrink: 0; margin-top: 3px; min-width: 36px; text-align: right;
+  }
+
+  /* Recommendations checklist */
+  .rec-section { margin-bottom: 36px; }
+  .rec-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 2px solid var(--line); margin-bottom: 2px;
+  }
+  .rec-section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .rec-section-count { font-size: 11px; color: var(--muted); }
+  .rec-empty { padding: 14px 0; color: var(--muted); font-size: 13px; font-style: italic; }
+  .rec-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 4px; border-bottom: 1px solid var(--line);
+  }
+  .rec-item:last-child { border-bottom: none; }
+  .rec-check {
+    margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0;
+    cursor: pointer; accent-color: var(--accent);
+  }
+  .rec-check:checked + .rec-body .rec-action { text-decoration: line-through; color: var(--muted); }
+  .rec-body { flex: 1; min-width: 0; }
+  .rec-action { font-size: 14px; line-height: 1.45; color: var(--text); }
+  .rec-evidence {
+    font-size: 11px; color: var(--muted); font-style: italic; margin-top: 4px;
+  }
+  .rec-notes {
+    width: 100%; margin-top: 6px; font-size: 12px;
+    resize: vertical; min-height: 26px; box-sizing: border-box;
+  }
+  .rec-impact {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    flex-shrink: 0; margin-top: 2px; min-width: 44px; text-align: right;
+  }
+
   /* Narrative card */
   .data-card.narrative-card {
     padding: 28px 32px;
@@ -1359,53 +1442,17 @@
     </div>
   </div>
 
-  <!-- ============================ LAYER 2: RECOMMENDATIONS SECTIONS ============================ -->
+  <!-- ============================ RECOMMENDATIONS: CHECKLIST ============================ -->
   <div class="view" id="view-recommendations-hub">
-    <div class="section-hub">
-      <h2>Recommendations</h2>
-      <p class="lede">Synthesized priority actions across all evaluations — editable operator notes.</p>
-      <div class="section-cards" id="recommendations-sections"></div>
-    </div>
-  </div>
-
-  <!-- ============================ LAYER 3: RECOMMENDATIONS DATA ============================ -->
-  <div class="view" id="view-recommendations-quickwins">
     <div class="data-view">
-      <h2>Quick Wins</h2>
-      <p class="lede">High impact, low effort items.</p>
-      <div class="data-cards" id="recommendations-quickwins-data"></div>
-    </div>
-  </div>
-
-  <div class="view" id="view-recommendations-technical">
-    <div class="data-view">
-      <h2>Technical Fixes</h2>
-      <p class="lede">Lighthouse-sourced performance, accessibility, and best practices items.</p>
-      <div class="data-cards" id="recommendations-technical-data"></div>
-    </div>
-  </div>
-
-  <div class="view" id="view-recommendations-content">
-    <div class="data-view">
-      <h2>Content Opportunities</h2>
-      <p class="lede">Crawler + GSC-sourced — thin content, almost-ranking pages, missing meta.</p>
-      <div class="data-cards" id="recommendations-content-data"></div>
-    </div>
-  </div>
-
-  <div class="view" id="view-recommendations-engagement">
-    <div class="data-view">
-      <h2>Engagement Fixes</h2>
-      <p class="lede">GA4-sourced — high-bounce pages, low-duration pages, conversion drop-offs.</p>
-      <div class="data-cards" id="recommendations-engagement-data"></div>
-    </div>
-  </div>
-
-  <div class="view" id="view-recommendations-bilingual">
-    <div class="data-view">
-      <h2>Bilingual Gaps</h2>
-      <p class="lede">Bilingual Audit-sourced — translation priorities, hreflang fixes, content parity.</p>
-      <div class="data-cards" id="recommendations-bilingual-data"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <h2>Recommendations</h2>
+          <p class="lede">Four tools, one checklist. Check off items as they get fixed.</p>
+        </div>
+        <button class="btn primary sm" onclick="saveRecommendations()">Save</button>
+      </div>
+      <div id="recommendations-checklist"></div>
     </div>
   </div>
 
@@ -1464,6 +1511,20 @@
       <h2>The Opportunity</h2>
       <p class="lede">The sales narrative — most important section to edit before a client conversation. Editable in English and Spanish.</p>
       <div class="data-cards" id="narrative-opportunity-data"></div>
+    </div>
+  </div>
+
+  <!-- ============================ DIAGNOSTIC REPORT ============================ -->
+  <div class="view" id="view-diagnostic-hub">
+    <div class="data-view">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+        <div>
+          <h2>Diagnostic Report</h2>
+          <p class="lede">Every problem found, explained in plain English. Show this to anyone.</p>
+        </div>
+        <button class="btn primary sm" onclick="downloadDiagnosticReport()">Download Report</button>
+      </div>
+      <div id="diagnostic-checklist"></div>
     </div>
   </div>
 
@@ -1599,9 +1660,13 @@
     const slot = STATE.workspace?.captures?.[tool];
     if (!slot?.latest) return { status: 'idle', stat: 'Not run' };
     if (tool === 'bilingual') {
-      const pct = slot.latest.data?.coverage?.coveragePercent || 0;
-      const status = pct >= 50 ? 'done' : pct > 0 ? 'warn' : 'failed';
-      return { status, stat: toolStat(tool, slot.latest.data) };
+      const data = slot.latest.data;
+      // If there's an error field, the service itself crashed → real failure
+      if (slot.latest.error || data?.error) return { status: 'failed', stat: 'Error — see console' };
+      const pct = data?.coverage?.coveragePercent || 0;
+      // 0% just means the site has no Spanish pages — that's a result, not a crash
+      const status = pct >= 50 ? 'done' : pct > 0 ? 'warn' : 'done';
+      return { status, stat: toolStat(tool, data) };
     }
     return { status: 'done', stat: toolStat(tool, slot.latest.data) };
   }
@@ -1627,9 +1692,8 @@
       case 'bilingual': return `${data.coverage?.coveragePercent || 0}% coverage`;
       case 'recommendations': {
         if (!Array.isArray(data)) return '0 actions';
-        const buckets = bucketRecommendations(data);
-        const qw = buckets.quickwins.length;
-        return qw > 0 ? `${qw} quick win${qw !== 1 ? 's' : ''} · ${data.length} total` : `${data.length} actions`;
+        const high = data.filter(r => r.impact === 'high').length;
+        return high > 0 ? `${high} high priority · ${data.length} total` : `${data.length} actions`;
       }
       case 'narrative': return Array.isArray(data) ? 'Draft ready' : 'Complete';
       default: return 'Complete';
@@ -1644,6 +1708,7 @@
     { id: "deep-traffic", name: "Open Books", bullets: ["GA4 — sessions, devices, language & location", "GA4 — landing pages, exit pages, conversions", "GSC — queries, rankings & index coverage", "Requires client GA4 + GSC credentials"], captureEndpoint: "/api/capture/deep-traffic", bodyKey: "url", needsCredentials: true },
     { id: "recommendations", name: "Recommendations", bullets: ["Synthesizes priority actions"], captureEndpoint: "/api/analyze/recommendations", bodyKey: "hostname", deps: [['lighthouse','Lighthouse'],['crawl','Crawler'],['ga4','GA4'],['gsc','GSC'],['bilingual','Bilingual']] },
     { id: "narrative", name: "Narrative Report", bullets: ["Prose synthesis of findings", "Bilingual - English and Spanish"], captureEndpoint: "/api/analyze/narrative", bodyKey: "hostname", deps: [['lighthouse','Lighthouse'],['crawl','Crawler'],['ga4','GA4'],['gsc','GSC'],['bilingual','Bilingual'],['recommendations','Recs']] },
+    { id: "diagnostic", name: "Diagnostic Report", bullets: ["Every finding explained in plain English", "Show to clients, developers, or yourself", "Download as a formatted report"], captureEndpoint: null, bodyKey: null, isDiagnostic: true },
     { id: "edits", name: "Edits & Exports", bullets: ["Edit JSON & Markdown artifacts inline", "Build packages for Page Builder, prospect, or archive", "Copy or download any file"], captureEndpoint: null, bodyKey: null, isEditor: true }
   ];
 
@@ -1798,7 +1863,7 @@
           return null;
         }).filter(Boolean);
         const fixAdvice = extractFixAdvice(lhr, id);
-        return { priority, name: a.title, desc: a.description?.split('.')[0] || '', saving: savingStr, elements, fixAdvice };
+        return { id, priority, name: a.title, desc: a.description?.split('.')[0] || '', saving: savingStr, elements, fixAdvice };
       }).sort((a,b) => ({ high:0,med:1,low:2 }[a.priority] - { high:0,med:1,low:2 }[b.priority]));
   }
 
@@ -1824,7 +1889,7 @@
           explanation: it.explanation || it.node?.explanation || '',
         })).filter(el => el.selector || el.snippet || el.label);
         const fixAdvice = extractFixAdvice(lhr, ref.id);
-        const item = { priority, name: a.title, desc: count > 0 ? `${count} issue(s)` : a.description?.split('.')[0] || '', elements, fixAdvice };
+        const item = { id: ref.id, priority, name: a.title, desc: count > 0 ? `${count} issue(s)` : a.description?.split('.')[0] || '', elements, fixAdvice };
         if (a.score < 1) failing.push(item);
         else passing.push(item);
       });
@@ -1960,10 +2025,11 @@
     // Build a lookup from filename -> web path using the screenshots array
     const screenshotMap = {};
     (crawl.screenshots || []).forEach(absPath => {
+      if (!absPath) return;
       const filename = absPath.replace(/\\/g, '/').split('/').pop();
       if (filename) screenshotMap[filename] = `/reports/${hostname}/screenshots/${filename}`;
     });
-    return crawl.totalPages.slice(0, 12).map(p => {
+    return crawl.totalPages.slice(0, 12).filter(p => p?.url).map(p => {
       const pathPart = p.url.replace(/https?:\/\/[^/]+/, '') || '/';
       const expectedFile = `screenshot-${pathPart.replace(/\//g, '-')}.png`;
       const realThumb = screenshotMap[expectedFile] || null;
@@ -2176,23 +2242,769 @@
       }));
   }
 
-  // Recommendations -> category buckets
-  function bucketRecommendations(recs) {
-    if (!Array.isArray(recs)) return { quickwins:[], technical:[], content:[], engagement:[], bilingual:[] };
-    const impMap = { high:'High', medium:'Medium', low:'Low' };
-    const toRender = r => ({
-      priority: r.impact === 'high' ? 'high' : r.impact === 'medium' ? 'med' : 'low',
-      action: r.action, source: r.source, impact: impMap[r.impact] || r.impact,
-      effort: impMap[r.effort] || r.effort, notes: r.notes || '', id: r.id, included: r.included,
-      evidence: r.evidence || ''
+  /* ═══════════════════════════════════════════════════════
+     DIAGNOSTIC REPORT
+     ═══════════════════════════════════════════════════════ */
+
+  const DIAGNOSTIC_COPY = {
+    // ── PERFORMANCE ──
+    'render-blocking-resources': {
+      title: 'Files are making visitors wait before they can see anything',
+      term: 'Render-blocking resources are files your site loads before showing anything on screen — like making someone wait at the door while you tidy the whole house before letting them in.',
+      why: 'Every extra second your page takes to appear costs you visitors. Most people abandon a website that takes more than 3 seconds to load — and they rarely come back.',
+      fix: 'Move non-essential scripts to load after the page appears, and only load the styles needed for the top of the page right away.'
+    },
+    'unused-javascript': {
+      title: 'Your site downloads code it never actually uses',
+      term: 'JavaScript is the programming language that makes websites interactive — menus, sliders, forms. "Unused" JavaScript is code that gets downloaded by every visitor but never actually does anything on that page.',
+      why: 'This is like ordering 10 dishes at a restaurant and only eating one. The extra download wastes your visitor\'s time and data — especially on slow mobile connections.',
+      fix: 'Remove or postpone loading JavaScript files that aren\'t needed on this specific page.'
+    },
+    'unused-css-rules': {
+      title: 'Your site downloads styling it never uses',
+      term: 'CSS is the code that controls how your website looks — colors, fonts, spacing. Unused CSS is styling that gets downloaded by every visitor but never actually applied to anything they see.',
+      why: 'Same as unused JavaScript — dead weight that slows every page load for every visitor, every time.',
+      fix: 'Remove unused CSS rules or load them only on the pages that actually need them.'
+    },
+    'uses-optimized-images': {
+      title: 'Images are much larger than they need to be',
+      term: 'Image optimization means compressing a photo to the smallest file size that still looks good on screen — like packing a suitcase efficiently instead of throwing everything in unfolded.',
+      why: 'Oversized images are the most common reason websites load slowly. A photo that\'s 3MB doesn\'t look better than a 200KB version on your phone — it just loads 15× slower.',
+      fix: 'Compress all images before uploading. For photos, aim for under 200KB. Tools like TinyPNG or Squoosh can do this for free.'
+    },
+    'uses-webp-images': {
+      title: 'Images are saved in an old format that loads slower',
+      term: 'WebP is a modern image format created by Google. It shows the same visual quality as older formats (JPG, PNG) but at roughly half the file size — smaller file, same picture.',
+      why: 'Switching to WebP makes pages load faster with no visible quality loss. It\'s a free speed improvement that requires no design changes.',
+      fix: 'Convert images from JPG/PNG to WebP format. Most modern image editing tools and hosting platforms can do this automatically.'
+    },
+    'efficient-animated-content': {
+      title: 'Animated images are slowing the page down significantly',
+      term: 'GIF is an animated image format from the 1980s. It was designed long before the modern web. Modern video formats do the same thing at 10–20× smaller file sizes.',
+      why: 'A single animated GIF can be 5–10MB. The same animation as a short video file is typically 200–400KB. That\'s a massive difference in how fast your page loads.',
+      fix: 'Replace animated GIFs with short MP4 or WebM video files set to autoplay and loop silently.'
+    },
+    'uses-text-compression': {
+      title: 'Text files aren\'t being compressed before they\'re sent to visitors',
+      term: 'Text compression (like gzip) is like zipping files before emailing them — the server shrinks HTML, CSS, and JavaScript files before sending them, then the browser unzips them instantly on arrival.',
+      why: 'Compression can reduce file sizes by 70–90% with zero visible impact. It\'s one of the easiest speed improvements available and costs nothing to implement.',
+      fix: 'Enable gzip or Brotli compression on the web server. This is a server configuration setting — one change, permanent benefit.'
+    },
+    'largest-contentful-paint': {
+      title: 'The main content takes too long to appear on screen',
+      term: 'LCP (Largest Contentful Paint) is Google\'s way of measuring how quickly the biggest visible thing on your page — usually a hero image or main headline — actually appears on screen. Google considers under 2.5 seconds "good."',
+      why: 'LCP is one of the three Core Web Vitals Google uses directly in its ranking algorithm. A slow LCP means both a worse experience for visitors and a lower position in search results.',
+      fix: 'Optimize the main hero image, reduce scripts that delay loading, and consider a faster hosting provider.'
+    },
+    'total-blocking-time': {
+      title: 'Your page becomes unresponsive while it\'s loading',
+      term: 'TBT (Total Blocking Time) measures how long your page appears to be loaded but actually won\'t respond to clicks or taps — the screen looks ready, but nothing works yet.',
+      why: 'A page that looks loaded but won\'t respond to clicks feels broken. Visitors assume something is wrong and leave — often before your page is actually ready.',
+      fix: 'Break up large programming tasks into smaller chunks so the browser can respond to visitor input in between them.'
+    },
+    'cumulative-layout-shift': {
+      title: 'Things jump around on the page while it\'s loading',
+      term: 'CLS (Cumulative Layout Shift) measures how much things move around on the page while it loads — images, ads, or text that pop in and push other content out of the way.',
+      why: 'Unexpected movement is frustrating and causes accidental clicks on the wrong things. Google penalizes high CLS directly in its ranking algorithm.',
+      fix: 'Set the size of images and ad spaces in the code before they load, so the page layout stays stable while everything arrives.'
+    },
+    // ── SEO ──
+    'document-title': {
+      title: 'Page title is missing or has a problem',
+      term: 'The page title is the text shown in the browser tab at the top of your screen — and as the blue clickable link when your site shows up in Google. It\'s the name tag your page wears in search results.',
+      why: 'The page title is one of the most important signals Google uses to decide what your page is about and when to show it. A missing, duplicate, or poorly written title directly hurts how often you appear in search.',
+      fix: 'Write a clear, unique title for each page — under 60 characters, with the most important words first.'
+    },
+    'meta-description': {
+      title: 'No preview text for Google search results',
+      term: 'The meta description is the 2–3 line summary that appears below your page title in Google search results. It\'s what people read to decide whether to click your link.',
+      why: 'Without one, Google picks random text from your page — which often looks confusing or gets cut off mid-sentence. A good description acts like a mini-advertisement that brings people in from search.',
+      fix: 'Write a compelling 1–2 sentence description for each page (120–160 characters). Include what the page offers and why someone should visit.'
+    },
+    'link-text': {
+      title: 'Links use vague words like "click here" or "read more"',
+      term: 'Link text is the visible, clickable words in a hyperlink. When a link just says "click here," neither Google nor a visually impaired visitor using a screen reader can tell where it goes or why it matters.',
+      why: 'Google uses link text to understand what the linked page is about. Vague link text wastes a ranking signal and makes your site harder to navigate for everyone.',
+      fix: 'Replace vague link text with descriptive phrases. Instead of "read more," write "read our NJ tax preparation guide."'
+    },
+    'hreflang': {
+      title: 'Language targeting tags have errors',
+      term: 'hreflang tags are small instructions in your website code that tell Google: "this page is for Spanish speakers" or "show this version to English-speaking visitors in the US." They connect your language versions so Google shows the right one.',
+      why: 'With errors in these tags, Google may show your Spanish visitors your English page — or ignore your Spanish pages completely. For a bilingual business, this directly costs customers.',
+      fix: 'Fix the hreflang tag format on each affected page and make sure every language version correctly points to its counterparts.'
+    },
+    'robots-txt': {
+      title: 'Problem found in the file that controls Google\'s access to your site',
+      term: 'robots.txt is a small file on your website that acts like a sign for Google — telling it which pages it\'s allowed to visit and index, and which ones to skip. Every website has one.',
+      why: 'A mistake in this file can accidentally block Google from pages you want ranked, or allow access to admin areas you want private.',
+      fix: 'Review the robots.txt file and fix the flagged line. Make sure no public pages you want ranked are accidentally blocked.'
+    },
+    'canonical': {
+      title: 'Google may be confused about which version of this page to rank',
+      term: 'A canonical tag is a small signal in your page code that tells Google: "this is the main version of this page — rank this one." Without it, the same content at two slightly different web addresses can confuse Google.',
+      why: 'When Google sees the same content at multiple URLs with no direction, it may split its ranking power between them — or choose the wrong one, or penalize both for duplication.',
+      fix: 'Add a canonical tag to each page pointing to its preferred, definitive URL.'
+    },
+    'is-crawlable': {
+      title: 'This page is accidentally hidden from Google',
+      term: 'A "noindex" instruction is code that tells Google: do not show this page in search results. It\'s useful for login pages or admin areas — but devastating if applied to pages you want people to find.',
+      why: 'Any page with a noindex tag is completely invisible in Google — no matter how good the content is, or how many people link to it.',
+      fix: 'Remove the noindex tag from any public page you want to appear in search results.'
+    },
+    // ── BEST PRACTICES ──
+    'is-on-https': {
+      title: 'Your site is not using a secure connection',
+      term: 'HTTPS is the secure version of the web. You can tell a site uses it by the padlock icon in the browser address bar. Without it, data sent between visitors and your site travels unencrypted — visible to anyone who intercepts it.',
+      why: 'Modern browsers display "Not Secure" warnings on non-HTTPS sites. This frightens visitors away immediately. Google also ranks HTTPS sites higher as a direct ranking signal.',
+      fix: 'Install an SSL certificate on your server. Most hosting providers offer this for free through a service called Let\'s Encrypt.'
+    },
+    'no-vulnerable-libraries': {
+      title: 'Your site uses software with known security problems',
+      term: 'JavaScript libraries are pre-written code packages that developers use to build websites faster (like jQuery). When security holes are found in these packages, hackers specifically scan the web for sites still running the old, vulnerable versions.',
+      why: 'Running software with known vulnerabilities is like leaving your front door unlocked. Hackers scan for these automatically. A compromised site can show malware to your visitors or get blacklisted by Google.',
+      fix: 'Update the flagged JavaScript libraries to their current versions.'
+    },
+    // ── ACCESSIBILITY ──
+    'image-alt': {
+      title: 'Images have no description',
+      term: 'Alt text is a written description attached to an image in the website code. Visitors don\'t see it directly — but Google reads it to understand what the image shows, and screen readers speak it aloud to blind visitors.',
+      why: 'Images without alt text are invisible to Google Image Search (lost traffic opportunity) and completely inaccessible to blind users — which is also an ADA compliance concern.',
+      fix: 'Add a short, specific description to each image. For a logo: "Jennifer Vinciguerra CPA logo." For a team photo: "Jennifer meeting with a client at her Montclair office."'
+    },
+    'color-contrast': {
+      title: 'Some text is too hard to read against its background',
+      term: 'Color contrast is the brightness difference between text and the background behind it. Light gray text on a white background has low contrast — it strains the eyes and may be impossible to read for people with visual impairments.',
+      why: 'Low contrast text fails accessibility standards that are increasingly cited in ADA lawsuits. It also simply makes your content harder to read for everyone, reducing time spent on your site.',
+      fix: 'Darken the text or change the background color on the flagged elements until they meet the minimum contrast ratio of 4.5:1.'
+    },
+    'heading-order': {
+      title: 'Your page headings are not in the correct order',
+      term: 'Headings (H1, H2, H3...) are like the chapter and section titles of your page. H1 is the main title, H2 is a major section, H3 is a subsection within that. Skipping levels — jumping from H1 to H3 — breaks the logical structure.',
+      why: 'Screen readers navigate pages by jumping between headings. Out-of-order headings confuse blind users. Google also uses heading structure to understand the hierarchy of your content.',
+      fix: 'Restructure headings in order: one H1 per page, H2 for main sections, H3 for subsections. Don\'t skip levels.'
+    },
+    'html-has-lang': {
+      title: 'The page doesn\'t say what language it\'s written in',
+      term: 'The lang attribute is a small tag at the very top of every webpage\'s code that tells browsers and screen readers which language the content is in — like a label on a book spine that says "English" or "Español."',
+      why: 'Without it, screen readers guess — and guess wrong, reading your content in the wrong language\'s voice and pronunciation. Google also uses this signal for language-specific search.',
+      fix: 'Add lang="en" to English pages and lang="es" to Spanish pages, in the opening HTML tag at the top of each page\'s code.'
+    },
+    'button-name': {
+      title: 'Some buttons on your site have no label',
+      term: 'A button label is the text or accessible name that describes what clicking a button does. An unlabeled button is like a mystery switch on a wall — you don\'t know what it controls.',
+      why: 'Screen readers announce buttons to blind visitors. An unlabeled button gets announced as just "button" with no context — completely useless for navigation. This is also an ADA compliance concern.',
+      fix: 'Add visible text or an accessibility label to every button that describes what it does — for example, "Submit form" or "Open the navigation menu."'
+    },
+    'link-name': {
+      title: 'Some links on your site have no readable label',
+      term: 'A link label is the visible text or accessible name that describes where a link goes. Links that contain only an icon or image with no label are invisible to screen readers.',
+      why: 'Screen readers navigate pages by reading out link text. An unlabeled link gets announced as "link" with nothing else — blind visitors cannot tell where it goes or whether to click it. This is an ADA compliance concern.',
+      fix: 'Add descriptive text to every link. For icon-only links (like social media icons), add an aria-label attribute explaining the destination — for example, aria-label="Visit our Facebook page".'
+    },
+    'meta-viewport': {
+      title: 'Your site prevents visitors from zooming in on their phone',
+      term: 'The viewport meta tag tells mobile browsers how to display your page. Setting "user-scalable=no" locks the zoom level, preventing visitors from pinching to zoom in on text or images.',
+      why: 'Blocking zoom is a significant accessibility violation. People with low vision depend on zooming to read content. It also fails WCAG accessibility standards, which are increasingly cited in ADA lawsuits.',
+      fix: 'Remove the user-scalable=no setting from your viewport meta tag. Change it to: <meta name="viewport" content="width=device-width, initial-scale=1">.'
+    },
+    'offscreen-images': {
+      title: 'Your site loads images that are not yet visible on screen',
+      term: 'Offscreen images are photos and graphics that appear lower on the page — below what the visitor can see when the page first loads. Loading them immediately wastes bandwidth that could be used to show the visible content faster.',
+      why: 'Loading images the visitor hasn\'t scrolled to yet slows down the initial page load — making your site feel slower than it needs to be, especially on mobile.',
+      fix: 'Add lazy loading to images below the fold. This is typically a one-line code change: add loading="lazy" to your image tags, or enable it through your CMS or page builder settings.'
+    },
+    'properly-size-images': {
+      title: 'Images are being served larger than they need to be',
+      term: 'Properly sized images means serving a photo at the exact dimensions it will be displayed — not a 3000px wide photo in a 300px container. The excess pixels are downloaded but never shown.',
+      why: 'Oversized images waste data and slow page load for every visitor on every visit. This is one of the most common and most fixable performance problems on small business websites.',
+      fix: 'Resize images to the actual dimensions they appear on screen before uploading them. Use a tool like Squoosh or TinyPNG. Your developer can also configure the server to serve different sizes automatically.'
+    },
+    'uses-webp-images': {
+      title: 'Images are not using the most efficient format',
+      term: 'WebP is a modern image format that produces the same visual quality as JPEG or PNG at roughly half the file size. It is supported by all modern browsers.',
+      why: 'Using older image formats (JPEG, PNG) when WebP is available means every visitor downloads larger files than necessary — slowing page load with no visible benefit.',
+      fix: 'Convert your images to WebP format before uploading. Tools like Squoosh, TinyPNG, or your hosting platform\'s image CDN can handle this automatically.'
+    },
+    'uses-rel-preconnect': {
+      title: 'Your site is slow to connect to outside services it depends on',
+      term: 'Preconnect hints tell the browser to start establishing a connection to an external server (like Google Fonts or a CDN) before it actually needs files from it — getting a head start on the handshake.',
+      why: 'Without preconnect hints, the browser waits until it discovers an external resource before starting the connection. That delay adds to load time on every page visit.',
+      fix: 'Add rel="preconnect" link tags in your page\'s <head> for any external domains your site loads fonts or scripts from. Your developer can identify these from the Lighthouse report.'
+    },
+    'redirects': {
+      title: 'Your pages are making visitors take extra detours to arrive',
+      term: 'A redirect is when one web address automatically sends visitors to a different address. Multiple chained redirects — A sends to B, B sends to C — make every visitor\'s browser complete multiple round trips before the page loads.',
+      why: 'Each redirect adds latency. Two or three redirects in a chain can add several hundred milliseconds to load time — noticeable on mobile, and a ranking signal Google measures.',
+      fix: 'Audit your redirect chains and shorten them to a single redirect where possible. Update any internal links that point to redirected URLs to point directly to the final destination.'
+    },
+    'unminified-css': {
+      title: 'Your site\'s styling code has not been compressed for delivery',
+      term: 'Minification removes spaces, comments, and unnecessary characters from CSS files without changing what they do — like removing all the blank lines and margin notes from a recipe book. The instructions are the same, the book is smaller.',
+      why: 'Unminified CSS files are larger than they need to be, adding unnecessary bytes to every page load.',
+      fix: 'Enable CSS minification in your build process, CMS plugin, or hosting CDN. Most modern platforms (WordPress, Shopify, Webflow) have a one-click setting for this.'
+    },
+    'unminified-javascript': {
+      title: 'Your site\'s code files have not been compressed for delivery',
+      term: 'Minification removes whitespace, comments, and long variable names from JavaScript files without changing what they do — making them smaller to download.',
+      why: 'Unminified JavaScript is larger than necessary, slowing every page load.',
+      fix: 'Enable JavaScript minification in your CMS, build tool, or CDN. Most platforms offer this as a plugin or setting.'
+    },
+    'errors-in-console': {
+      title: 'Your site is generating hidden errors in the browser',
+      term: 'Console errors are error messages generated by your website\'s code that are invisible to visitors but logged in the browser\'s developer tools. They indicate broken or failing code.',
+      why: 'Console errors signal that something on your site is not working as intended — a broken script, a missing file, or a failed network request. They can cause silent failures that affect certain visitors without you knowing.',
+      fix: 'Open your browser\'s developer tools (F12), go to the Console tab, and share the error messages with your developer to investigate and resolve.'
+    },
+    'inspector-issues': {
+      title: 'Your site has issues flagged by Chrome\'s built-in inspector',
+      term: 'Chrome\'s Issues panel flags problems like deprecated browser features, mixed content (HTTP resources on an HTTPS page), and cookie security issues — things that will break or become errors in future browser versions.',
+      why: 'These issues may not cause visible problems today, but they represent technical debt that will cause real failures as browsers update. Google also uses them as quality signals.',
+      fix: 'Open Chrome DevTools (F12), go to the Issues tab, and review the flagged items with your developer.'
+    },
+    'crawlable-anchors': {
+      title: 'Some links on your site cannot be followed by Google',
+      term: 'Crawlable anchors are links that Google\'s crawler can actually follow to discover and index new pages. Links built with JavaScript events, empty href attributes, or javascript:void(0) cannot be followed.',
+      why: 'If Google cannot follow a link, the page it points to may never be discovered or indexed — making it effectively invisible in search results.',
+      fix: 'Replace non-crawlable links with standard HTML anchor tags using proper href attributes pointing to real URLs.'
+    },
+    // ── CRAWLER ──
+    'broken-link': {
+      title: 'Link leads to a page that doesn\'t exist',
+      term: 'A broken link (also called a dead link or 404 error) is a clickable link on your site that leads nowhere — like a phone number that\'s been disconnected. Visitors click it and hit a dead end.',
+      why: 'Broken links frustrate visitors and make your site look neglected. Google also counts them as a quality signal — a site with broken links looks unmaintained, which can hurt rankings.',
+      fix: 'Either update the link to point to the correct working page, or remove the link if the destination no longer exists.'
+    },
+    'missing-alt': {
+      title: 'Image has no description attached to it',
+      term: 'Alt text is a written description of an image, stored in the website code. Visitors don\'t see it — but Google reads it to understand what the image shows, and screen readers speak it aloud to blind visitors.',
+      why: 'Images without alt text are invisible to Google Image Search and inaccessible to blind visitors. Both hurt your business — one is lost traffic, the other is an ADA compliance issue.',
+      fix: 'Add a short description to each image describing what it shows. Be specific — not "image1.jpg" but "Dr. Nyave smiling at the front desk."'
+    },
+    'title-too-long': {
+      title: 'Page title gets cut off in Google search results',
+      term: 'Google shows page titles in search results, but only up to about 60 characters. Longer titles get cut off with "..." at the end — which looks incomplete and unprofessional.',
+      why: 'A cut-off title makes your listing look messy in search results, and you lose control of your message. The most important words may end up being the ones Google drops.',
+      fix: 'Shorten the title to under 60 characters. Put your most important words at the beginning, not the end.'
+    },
+    'title-too-short': {
+      title: 'Page title is too brief to be useful',
+      term: 'A title under 30 characters is usually missing important keywords or context. Google gives you about 60 characters to describe your page — using only a fraction of that wastes valuable search real estate.',
+      why: 'Short, vague titles rank for fewer search terms and give visitors less reason to click. You\'re leaving ranking potential unused.',
+      fix: 'Expand the title to 40–60 characters, including your main service, location, or a key benefit.'
+    },
+    'missing-meta': {
+      title: 'No preview text for Google search results',
+      term: 'The meta description is the 2–3 line summary shown below your link in Google search results. Without one, Google chooses its own text from your page — often something that looks awkward or incomplete.',
+      why: 'A well-written meta description can double your click-through rate from search results — getting you more visitors from the same ranking position, at zero cost.',
+      fix: 'Write a clear 1–2 sentence description for this page (120–160 characters) that tells searchers exactly what they\'ll find and why they should visit.'
+    },
+    'no-schema': {
+      title: 'Google can\'t identify what type of business this is',
+      term: 'Schema markup is structured code added to your website that formally tells Google: "this is a dental office" along with your address, phone, hours, and services. Think of it as filling out Google\'s official business registration form in your website\'s code.',
+      why: 'Without schema, Google has to guess. With it, you\'re eligible for rich results — the enhanced search listings that show your star rating, hours, and FAQ answers directly in Google before anyone even clicks. These get far more clicks.',
+      fix: 'Add LocalBusiness schema markup to your homepage with your business name, address, phone, hours, and service types. Your developer can add this in one session.'
+    },
+    'not-aeo-ready': {
+      title: 'Your site isn\'t set up for AI-powered search',
+      term: 'AEO (Answer Engine Optimization) means structuring your content so AI tools — like Google\'s AI Overviews, Siri, and Alexa — can pull answers directly from your site when someone asks a question. It requires specific formats like FAQ sections and certain types of schema.',
+      why: 'AI-powered search is the fastest-growing way people find local businesses. If your site isn\'t AEO-ready, you\'re invisible to anyone asking their phone "dentist near me" and getting an AI-generated answer.',
+      fix: 'Add a FAQ section with real questions your clients ask. Format it as clear question-and-answer pairs. Add FAQPage and LocalBusiness schema to your key pages.'
+    },
+    'low-readability': {
+      title: 'Your content is written at too high a reading level',
+      term: 'Readability scores measure how easy text is to understand. The Flesch Reading Ease scale goes from 0–100 — higher means easier to read. Content written at a 12th grade level is harder for most people to follow and harder for AI assistants to summarize as a voice answer.',
+      why: 'Voice search (Siri, Google Assistant, Alexa) strongly prefers simple, clear language. And on the web, people skim — complex content loses readers who don\'t have time to decode dense prose.',
+      fix: 'Rewrite content using shorter sentences, everyday words, and an active voice. Aim for a Flesch score above 60 — roughly an 8th grade reading level.'
+    },
+    'no-og-tags': {
+      title: 'Your page looks unprofessional when shared on social media',
+      term: 'Open Graph tags (OG tags) are invisible code that social platforms — Facebook, LinkedIn, WhatsApp, iMessage — read when someone shares your link. They control what title, description, and image appear in the preview card that shows up.',
+      why: 'Without OG tags, shared links show as plain text with no image — easy to scroll past and ignore. A properly configured link turns into a visual card that looks like a real advertisement for your business, every time anyone shares it.',
+      fix: 'Add an og:title, og:description, og:image, and og:url tag to every page. The preview image should be at least 1200×630 pixels.'
+    },
+    'no-canonical': {
+      title: 'Google may be confused about which version of this page to rank',
+      term: 'A canonical tag is a signal that tells Google which URL is the "official" version of a page — because the same content can sometimes be reached at slightly different web addresses (with "www" vs. without, with a trailing slash vs. without).',
+      why: 'Without this signal, Google may split its ranking power between multiple versions of the same page — weakening all of them — or penalize you for what looks like duplicate content.',
+      fix: 'Add a canonical tag to each page\'s code that points to its single preferred URL.'
+    },
+    // ── BILINGUAL ──
+    'missing-spanish': {
+      title: 'No Spanish version of this page exists',
+      term: 'A Spanish page is a fully translated version of an English page, hosted at its own web address (for example, /es/servicios instead of /services) so Spanish-speaking visitors — and Google in Spanish searches — can find and use it.',
+      why: 'Over 40 million people in the US speak Spanish as their primary language. For many local businesses, this represents a significant portion of the market. Without Spanish pages, your site simply doesn\'t exist for those searches.',
+      fix: 'Create a Spanish translation of this page at the corresponding Spanish URL, then connect both versions with hreflang tags so Google knows they\'re related.'
+    },
+    'hreflang-error': {
+      title: 'Language targeting tags have errors',
+      term: 'hreflang tags are code instructions that tell Google which page to show to which language audience — linking your English and Spanish versions so Google always serves the right one to the right visitor.',
+      why: 'With errors in these tags, Google may ignore your Spanish pages, show the wrong version to the wrong audience, or simply not understand that you have a bilingual site at all.',
+      fix: 'Fix the hreflang format on the flagged pages. Every language version must correctly reference all its counterpart versions.'
+    },
+    'content-parity': {
+      title: 'The Spanish version of this page has much less content than English',
+      term: 'Content parity means the Spanish and English versions of a page contain roughly the same amount of information. A Spanish page that\'s 40% shorter than its English counterpart is considered "thin" — an incomplete translation.',
+      why: 'Google ranks pages on the depth and quality of their content. A thin Spanish page won\'t rank well in Spanish searches — even if the English version performs great.',
+      fix: 'Translate the full English content into Spanish, not just the headings or introduction. Match the English version\'s depth on every important page.'
+    }
+  };
+
+  function diagCopy(id, fallbackTitle) {
+    return DIAGNOSTIC_COPY[id] || {
+      title: fallbackTitle || (id ? id.replace(/-/g, ' ') : 'Unknown issue'),
+      term: 'A technical issue identified during the audit.',
+      why: 'This finding may affect your site\'s performance, visibility, or user experience.',
+      fix: 'Work with your developer or web professional to address this issue.'
+    };
+  }
+
+  function buildDevWorkOrderItems() {
+    const out = { pulse: [], lighthouse: [], crawler: [], bilingual: [] };
+
+    // ── PUBLIC PULSE ──
+    const bt = captureData('broad-traffic');
+    if (bt) {
+      const psi = bt.psi || {};
+      const rawPerf = psi.performanceScore ?? -1;
+      const perfScore = rawPerf > 1 ? Math.round(rawPerf) : rawPerf >= 0 ? Math.round(rawPerf * 100) : -1;
+      if (perfScore >= 0 && perfScore < 90) out.pulse.push({ priority: perfScore < 50 ? 'high' : 'medium', task: 'Improve mobile page speed', location: `https://${STATE.hostname}`, detail: `PSI mobile score: ${perfScore}/100` });
+      const rawBP = psi.bestPracticesScore ?? -1;
+      const bpScore = rawBP > 1 ? Math.round(rawBP) : rawBP >= 0 ? Math.round(rawBP * 100) : -1;
+      if (bpScore >= 0 && bpScore < 70) out.pulse.push({ priority: 'medium', task: 'Fix Best Practices issues', location: `https://${STATE.hostname}`, detail: `Best Practices score: ${bpScore}/100` });
+      const gbp = bt.gbp || {};
+      if (gbp.rating != null && gbp.rating < 4.0) out.pulse.push({ priority: 'high', task: 'Improve Google rating', location: 'Google Business Profile', detail: `Current rating: ${gbp.rating} ★` });
+      if (gbp.reviewCount != null && gbp.reviewCount < 10) out.pulse.push({ priority: 'medium', task: 'Get more Google reviews', location: 'Google Business Profile', detail: `Current count: ${gbp.reviewCount}` });
+      if (gbp.businessName && !gbp.hasPhotos) out.pulse.push({ priority: 'medium', task: 'Add photos to Google Business Profile', location: 'Google Business Profile', detail: 'No photos detected' });
+      if (gbp.businessName && !gbp.hasPosts) out.pulse.push({ priority: 'low', task: 'Add posts to Google Business Profile', location: 'Google Business Profile', detail: 'No recent posts detected' });
+    }
+
+    // ── LIGHTHOUSE ──
+    const lhr = captureData('lighthouse');
+    if (lhr) {
+      transformLighthouseOpportunities(lhr).forEach(opp => {
+        if (opp.elements?.length) {
+          opp.elements.forEach(el => out.lighthouse.push({ priority: opp.priority === 'high' ? 'high' : 'medium', task: opp.name, location: el.detail || el.label || `https://${STATE.hostname}`, detail: el.wasted || '' }));
+        } else {
+          out.lighthouse.push({ priority: opp.priority === 'high' ? 'high' : 'medium', task: opp.name, location: `https://${STATE.hostname}`, detail: opp.saving || '' });
+        }
+      });
+      const { failing } = transformLighthouseFindings(lhr);
+      failing.forEach(f => {
+        if (f.elements?.length) {
+          f.elements.forEach(el => out.lighthouse.push({ priority: f.priority === 'high' ? 'high' : 'medium', task: f.name, location: el.selector || el.label || `https://${STATE.hostname}`, detail: el.snippet || el.explanation || '' }));
+        } else {
+          out.lighthouse.push({ priority: f.priority === 'high' ? 'high' : 'medium', task: f.name, location: `https://${STATE.hostname}`, detail: '' });
+        }
+      });
+      (lhr.categories?.accessibility?.auditRefs || []).forEach(ref => {
+        const a = lhr.audits?.[ref.id];
+        if (!a || a.score === null || a.score >= 1) return;
+        const items = a.details?.items || [];
+        if (items.length) {
+          items.forEach(item => out.lighthouse.push({ priority: 'medium', task: a.title, location: item.node?.selector || item.node?.nodeLabel || item.url || `https://${STATE.hostname}`, detail: item.node?.snippet || '' }));
+        } else {
+          out.lighthouse.push({ priority: 'medium', task: a.title, location: `https://${STATE.hostname}`, detail: '' });
+        }
+      });
+    }
+
+    // ── SITE CRAWLER ──
+    const crawl = captureData('crawl');
+    if (crawl) {
+      (crawl.brokenLinks || []).forEach(l => out.crawler.push({ priority: 'high', task: 'Fix broken link', location: l.url || l.href || '', detail: `Found on: ${l.from || 'unknown'} · Status: ${l.statusCode || l.status || '4xx'}` }));
+      (crawl.allImages || []).filter(img => !img.alt || img.alt.trim() === '').forEach(img => out.crawler.push({ priority: 'medium', task: 'Add alt text to image', location: img.src || '', detail: `Found on: ${img.foundOn || 'unknown'}` }));
+      (crawl.totalPages || []).filter(p => p?.url && p.titleIssue && p.titleIssue !== 'ok').forEach(p => out.crawler.push({ priority: 'medium', task: `Fix page title (${p.titleIssue})`, location: p.url, detail: `Current: "${p.title || '(none)'}"` }));
+      (crawl.totalPages || []).filter(p => p?.url && !p.metaDescription).forEach(p => out.crawler.push({ priority: 'medium', task: 'Add meta description', location: p.url, detail: '' }));
+      (crawl.totalPages || []).filter(p => p?.url && !p.schema?.length).forEach(p => out.crawler.push({ priority: 'high', task: 'Add schema markup', location: p.url, detail: 'Missing: LocalBusiness, Organization, FAQPage' }));
+      (crawl.totalPages || []).filter(p => p?.url && p.aeoAssessment && !p.aeoAssessment.isAEOReady).forEach(p => out.crawler.push({ priority: 'medium', task: 'Make page AEO-ready', location: p.url, detail: `Missing: ${(p.aeoAssessment?.missingCriticalTypes || []).join(', ')}` }));
+      (crawl.totalPages || []).filter(p => p?.url && !p.ogTags?.title && !p.ogTags?.description).forEach(p => out.crawler.push({ priority: 'low', task: 'Add Open Graph tags', location: p.url, detail: 'Missing og:title and og:description' }));
+    }
+
+    // ── BILINGUAL ──
+    const bi = captureData('bilingual');
+    if (bi) {
+      (bi.gaps || []).filter(g => g.status === 'missing').forEach(g => out.bilingual.push({ priority: 'high', task: 'Create Spanish version of page', location: g.englishUrl || '', detail: '' }));
+      (bi.hreflangIssues || []).forEach(h => out.bilingual.push({ priority: 'medium', task: 'Fix hreflang tag', location: h.url || '', detail: h.issue || h.error || 'hreflang error' }));
+      (bi.pairs || bi.contentParity || []).filter(p => p.parityScore != null && p.parityScore < 0.5).forEach(p => out.bilingual.push({ priority: 'low', task: 'Expand Spanish content', location: p.spanishUrl || p.url || '', detail: `${Math.round((p.parityScore || 0) * 100)}% of English word count` }));
+    }
+
+    return out;
+  }
+
+  function buildDiagnosticItems() {
+    const out = { pulse: [], lighthouse: [], crawler: [], bilingual: [] };
+    const impactColor = { high: 'var(--fail)', medium: 'var(--warn)', low: 'var(--muted)' };
+
+    // ── PUBLIC PULSE ──
+    const bt = captureData('broad-traffic');
+    if (bt) {
+      const psi = bt.psi || bt.pageSpeed || {};
+      // scores may arrive as 0-1 fractions (0.62) or already 0-100 integers (62)
+      const rawPerf = psi.performanceScore ?? psi.categories?.performance?.score ?? -1;
+      const perfScore = rawPerf > 1 ? Math.round(rawPerf) : (rawPerf >= 0 ? Math.round(rawPerf * 100) : -1);
+      const rawBP = psi.bestPracticesScore ?? -1;
+      const bpScore = rawBP > 1 ? Math.round(rawBP) : (rawBP >= 0 ? Math.round(rawBP * 100) : -1);
+
+      if (perfScore >= 0 && perfScore < 50) {
+        out.pulse.push({
+          id: 'psi-slow', impact: 'high',
+          title: `Your site scores ${perfScore}/100 for speed on real phones`,
+          term: 'PSI (PageSpeed Insights) is Google\'s tool that measures how fast your site loads for real users on real mobile phones — not in a lab. It gives a score from 0 to 100.',
+          why: `More than half of all web visitors are on phones. A score of ${perfScore}/100 means many of them are waiting too long and leaving before your page even loads.`,
+          fix: 'Run the Lighthouse audit above — it shows exactly which files and images are causing the slowdown with estimated time savings for each fix.',
+          technical: { label: 'PageSpeed Insights Score', detail: [`Mobile performance: ${perfScore}/100`] }
+        });
+      } else if (perfScore >= 50 && perfScore < 90) {
+        out.pulse.push({
+          id: 'psi-slow-moderate', impact: 'medium',
+          title: `Your site scores ${perfScore}/100 for speed — room to improve`,
+          term: 'PSI (PageSpeed Insights) is Google\'s tool that measures how fast your site loads for real users on real mobile phones. Scores below 90 have room for improvement.',
+          why: `A score of ${perfScore}/100 means your site is average or below average in speed. Google uses speed as a ranking factor, and slow pages lose visitors before they even read a word.`,
+          fix: 'Run the Lighthouse audit — it will show exactly what is slowing the page down with estimated savings for each fix.',
+          technical: { label: 'PageSpeed Insights Score', detail: [`Mobile performance: ${perfScore}/100`] }
+        });
+      }
+      if (bpScore >= 0 && bpScore < 70) {
+        out.pulse.push({
+          id: 'psi-best-practices', impact: 'medium',
+          title: `Your site scores ${bpScore}/100 on Best Practices — security and standards issues`,
+          term: 'Best Practices is a Google score measuring whether your site follows modern web security and coding standards — things like HTTPS, safe libraries, and proper browser behavior.',
+          why: `A score of ${bpScore}/100 means Google has flagged issues with how the site is built. These can affect security, trust signals, and search ranking.`,
+          fix: 'Review the Lighthouse Best Practices findings for specific issues — common ones include outdated libraries, missing security headers, and HTTP instead of HTTPS.',
+          technical: { label: 'PageSpeed Insights Best Practices', detail: [`Best Practices score: ${bpScore}/100`] }
+        });
+      }
+
+      const gbp = bt.gbp || bt.googleBusinessProfile || {};
+      if (gbp.rating != null && gbp.rating < 4.0) {
+        out.pulse.push({
+          id: 'gbp-low-rating', impact: 'high',
+          title: `Your Google rating is ${gbp.rating} stars — below the trust threshold`,
+          term: 'Your Google Business Profile rating is the star score (1–5) that appears when someone searches your business name or finds you on Google Maps.',
+          why: 'Most people won\'t consider a business rated below 4 stars. Studies show that a half-star difference in rating can change conversion by 19%. Your rating is visible before anyone even visits your site.',
+          fix: 'Respond professionally to all negative reviews. Proactively ask satisfied clients for reviews — a simple text message with a direct review link works well.',
+          technical: { label: 'Google Business Profile', detail: [`Rating: ${gbp.rating} ★`, `Reviews: ${gbp.reviewCount ?? 'unknown'}`] }
+        });
+      }
+      if (gbp.reviewCount != null && gbp.reviewCount < 10) {
+        out.pulse.push({
+          id: 'gbp-few-reviews', impact: 'medium',
+          title: `Only ${gbp.reviewCount} Google review${gbp.reviewCount !== 1 ? 's' : ''} — not enough to build trust`,
+          term: 'Review count is the total number of Google reviews your business has received. Prospective customers use it as a proxy for how established and reliable your business is.',
+          why: 'Businesses with fewer than 10 reviews are often passed over. Businesses with 50+ reviews convert significantly better — more reviews means more social proof.',
+          fix: 'Create a system for asking every happy client for a review. Provide a direct link to your Google review page — the easier you make it, the more people do it.',
+          technical: { label: 'GBP Review Count', detail: [`Current: ${gbp.reviewCount} review${gbp.reviewCount !== 1 ? 's' : ''}`] }
+        });
+      }
+      if (gbp.businessName && !gbp.hasPhotos) {
+        out.pulse.push({
+          id: 'gbp-no-photos', impact: 'medium',
+          title: 'Your Google Business Profile has no photos',
+          term: 'Google Business Profile photos are images you upload to your Google listing — they appear in search results and on Google Maps when someone looks up your business.',
+          why: 'Profiles with photos get 42% more requests for directions and 35% more clicks to websites than those without. Photos signal that the business is active and legitimate.',
+          fix: 'Upload at least 5–10 photos: your exterior, interior, team, and any work samples. Update them regularly — Google rewards active profiles.',
+          technical: { label: 'GBP Photos', detail: ['No photos detected on Google Business Profile'] }
+        });
+      }
+      if (gbp.businessName && !gbp.hasPosts) {
+        out.pulse.push({
+          id: 'gbp-no-posts', impact: 'low',
+          title: 'Your Google Business Profile has no recent posts',
+          term: 'Google Business Profile posts are short updates — announcements, offers, events — that appear directly in your Google search listing.',
+          why: 'Regular posts signal to Google that your business is active. They also give potential clients something to read before they even visit your site.',
+          fix: 'Post at least once a month — a special offer, a recent case win, a seasonal message. It takes 5 minutes and keeps your profile fresh.',
+          technical: { label: 'GBP Posts', detail: ['No recent posts detected on Google Business Profile'] }
+        });
+      }
+    }
+
+    // ── LIGHTHOUSE ──
+    const lhr = captureData('lighthouse');
+    if (lhr) {
+      transformLighthouseOpportunities(lhr).forEach(opp => {
+        const c = diagCopy(opp.id, opp.name);
+        out.lighthouse.push({
+          id: `lh-opp-${opp.id}`, impact: opp.impact || 'medium',
+          title: c.title, term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Performance Opportunity', detail: [opp.savings, opp.description].filter(Boolean) }
+        });
+      });
+      const { failing: seoFailing } = transformLighthouseFindings(lhr);
+      seoFailing.forEach(f => {
+        const c = diagCopy(f.id, f.name);
+        const detail = (f.elements || []).slice(0, 4);
+        out.lighthouse.push({
+          id: `lh-find-${f.id}`, impact: 'medium',
+          title: c.title, term: c.term, why: c.why, fix: c.fix,
+          technical: { label: `${f.category || 'SEO / Best Practices'} Finding`, detail }
+        });
+      });
+      const accRefs = lhr.categories?.accessibility?.auditRefs || [];
+      accRefs.forEach(ref => {
+        const a = lhr.audits?.[ref.id];
+        if (!a || a.score === null || a.score >= 1) return;
+        const c = diagCopy(ref.id, a.title);
+        const detail = (a.details?.items || []).slice(0, 3).map(item =>
+          item.node?.snippet || item.node?.nodeLabel || item.url || ''
+        ).filter(Boolean);
+        out.lighthouse.push({
+          id: `lh-acc-${ref.id}`, impact: 'medium',
+          title: c.title, term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Accessibility Finding', detail }
+        });
+      });
+    }
+
+    // ── SITE CRAWLER ──
+    const crawl = captureData('crawl');
+    if (crawl) {
+      if ((crawl.brokenLinks || []).length > 0) {
+        const c = diagCopy('broken-link');
+        out.crawler.push({
+          id: 'crawler-broken', impact: 'high',
+          title: `${crawl.brokenLinks.length} link${crawl.brokenLinks.length !== 1 ? 's' : ''} lead to pages that don\'t exist`,
+          term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Broken Links', detail: crawl.brokenLinks.slice(0, 6).map(l => `${l.url} — found on ${l.from}`) }
+        });
+      }
+      const missingAlt = (crawl.allImages || []).filter(img => !img.alt || img.alt.trim() === '');
+      if (missingAlt.length > 0) {
+        const c = diagCopy('missing-alt');
+        out.crawler.push({
+          id: 'crawler-alt', impact: 'medium',
+          title: `${missingAlt.length} image${missingAlt.length !== 1 ? 's have' : ' has'} no description`,
+          term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Images Without Alt Text', detail: missingAlt.slice(0, 5).map(img => img.src + (img.foundOn ? ` (on ${img.foundOn})` : '')) }
+        });
+      }
+      const pages = crawl.totalPages || [];
+      const groups = [
+        { key: 'title-too-long',  filter: p => p.titleIssue === 'too-long',  copy: diagCopy('title-too-long'),  impact: 'medium', fmt: p => `${p.url}: "${p.title}"` },
+        { key: 'title-too-short', filter: p => p.titleIssue === 'too-short', copy: diagCopy('title-too-short'), impact: 'low',    fmt: p => `${p.url}: "${p.title}"` },
+        { key: 'missing-meta',    filter: p => !p.metaDescription,           copy: diagCopy('missing-meta'),    impact: 'medium', fmt: p => p.url },
+        { key: 'no-schema',       filter: p => !p.schema?.length,            copy: diagCopy('no-schema'),       impact: 'high',   fmt: p => p.url },
+        { key: 'not-aeo-ready',   filter: p => p.aeoAssessment && !p.aeoAssessment.isAEOReady, copy: diagCopy('not-aeo-ready'), impact: 'medium', fmt: p => `${p.url} — missing: ${(p.aeoAssessment?.missingCriticalTypes||[]).join(', ')}` },
+        { key: 'no-og-tags',      filter: p => !p.ogTags?.title && !p.ogTags?.description, copy: diagCopy('no-og-tags'), impact: 'low', fmt: p => p.url },
+        { key: 'low-readability', filter: p => p.voiceAssessment && !p.voiceAssessment.isVoiceReady, copy: diagCopy('low-readability'), impact: 'low', fmt: p => `${p.url} — score: ${p.voiceAssessment?.easeScore ?? 'n/a'}, grade ${p.voiceAssessment?.gradeLevel ?? 'n/a'}` },
+      ];
+      groups.forEach(g => {
+        const matched = pages.filter(g.filter);
+        if (!matched.length) return;
+        const noun = matched.length === 1 ? 'page' : 'pages';
+        out.crawler.push({
+          id: `crawler-${g.key}`, impact: g.impact,
+          title: `${matched.length} ${noun} — ${g.copy.title.toLowerCase()}`,
+          term: g.copy.term, why: g.copy.why, fix: g.copy.fix,
+          technical: { label: `Affected Pages (${matched.length})`, detail: matched.slice(0, 6).map(g.fmt) }
+        });
+      });
+    }
+
+    // ── BILINGUAL ──
+    const bi = captureData('bilingual');
+    if (bi) {
+      const gaps = (bi.gaps || []).filter(g => g.status === 'missing');
+      if (gaps.length > 0) {
+        const c = diagCopy('missing-spanish');
+        out.bilingual.push({
+          id: 'bi-missing', impact: 'high',
+          title: `${gaps.length} page${gaps.length !== 1 ? 's have' : ' has'} no Spanish version`,
+          term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Pages Without Spanish Version', detail: gaps.slice(0, 8).map(g => g.englishUrl) }
+        });
+      }
+      const hreflangIssues = bi.hreflangIssues || [];
+      if (hreflangIssues.length > 0) {
+        const c = diagCopy('hreflang-error');
+        out.bilingual.push({
+          id: 'bi-hreflang', impact: 'medium',
+          title: `Language targeting tags have errors on ${hreflangIssues.length} page${hreflangIssues.length !== 1 ? 's' : ''}`,
+          term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'hreflang Errors', detail: hreflangIssues.slice(0, 5).map(h => `${h.url}: ${h.issue || h.error || 'error'}`) }
+        });
+      }
+      const thinPairs = (bi.pairs || bi.contentParity || []).filter(p => p.parityScore != null && p.parityScore < 0.5);
+      if (thinPairs.length > 0) {
+        const c = diagCopy('content-parity');
+        out.bilingual.push({
+          id: 'bi-parity', impact: 'low',
+          title: `${thinPairs.length} Spanish page${thinPairs.length !== 1 ? 's are' : ' is'} significantly shorter than the English version`,
+          term: c.term, why: c.why, fix: c.fix,
+          technical: { label: 'Content Parity', detail: thinPairs.slice(0, 5).map(p => `${p.spanishUrl || p.url}: ${Math.round((p.parityScore||0)*100)}% of English word count`) }
+        });
+      }
+    }
+
+    return out;
+  }
+
+  function renderDiagnosticReport() {
+    const container = document.getElementById('diagnostic-checklist');
+    if (!container) return;
+    let items;
+    try { items = buildDiagnosticItems(); }
+    catch(e) { console.error('[renderDiagnosticReport]', e); container.innerHTML = `<div style="color:var(--bad);padding:20px;font-size:13px">Error building report: ${e.message}</div>`; return; }
+    const total = Object.values(items).reduce((n, arr) => n + arr.length, 0);
+    if (!total) {
+      container.innerHTML = `<div style="text-align:center;color:var(--muted);padding:60px 0;font-size:13px">Run the audit tools above to generate your Diagnostic Report.<br><span style="font-size:12px;opacity:0.6">At minimum, run Lighthouse and Site Crawler.</span></div>`;
+      return;
+    }
+    const SECTIONS = [
+      { key: 'pulse',      label: 'Public Pulse' },
+      { key: 'lighthouse', label: 'Lighthouse' },
+      { key: 'crawler',    label: 'Site Crawler' },
+      { key: 'bilingual',  label: 'Bilingual Audit' },
+    ];
+    const impactColor = { high: 'var(--fail)', medium: 'var(--warn)', low: 'var(--muted)' };
+    container.innerHTML = SECTIONS.map(s => {
+      const sItems = items[s.key] || [];
+      const rows = sItems.length === 0
+        ? `<div class="diag-empty">No issues found — or this tool hasn't been run yet.</div>`
+        : sItems.map(item => `
+          <div class="diag-item" id="diag-${item.id}">
+            <div class="diag-item-top">
+              <div class="diag-check-col">
+                <input type="checkbox" class="diag-check" title="Mark as fixed"
+                  onchange="this.closest('.diag-item').classList.toggle('done', this.checked)">
+              </div>
+              <div class="diag-content">
+                <div class="diag-title">${item.title}</div>
+                <div class="diag-term"><strong>What is this?</strong> ${item.term}</div>
+                <div class="diag-why"><strong>Why it matters:</strong> ${item.why}</div>
+                <div class="diag-fix"><strong>What needs to change:</strong> ${item.fix}</div>
+                ${item.technical?.detail?.length ? `
+                  <details class="diag-technical">
+                    <summary>Technical detail <span style="font-size:10px;color:var(--muted)">(for the person doing the fix)</span></summary>
+                    <div class="diag-technical-body">
+                      <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--muted)">${item.technical.label}</div>
+                      ${item.technical.detail.map(d => `<div class="diag-tech-line">${d}</div>`).join('')}
+                    </div>
+                  </details>` : ''}
+              </div>
+              <div class="diag-impact" style="color:${impactColor[item.impact]||'var(--muted)'}">
+                ${(item.impact||'').toUpperCase()}
+              </div>
+            </div>
+          </div>`).join('');
+      return `
+        <div class="diag-section">
+          <div class="diag-section-header">
+            <span class="diag-section-title">${s.label}</span>
+            <span class="diag-section-count">${sItems.length} finding${sItems.length !== 1 ? 's' : ''}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }).join('');
+  }
+
+  function downloadDiagnosticReport() {
+    if (!STATE.hostname) { showToast('Load a workspace first', true); return; }
+    const items = buildDiagnosticItems();
+    const total = Object.values(items).reduce((n, arr) => n + arr.length, 0);
+    if (!total) { showToast('No findings yet — run the audit tools first', true); return; }
+    const hostname = STATE.hostname;
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const SECTIONS = [
+      { key: 'pulse',      label: 'Public Pulse' },
+      { key: 'lighthouse', label: 'Lighthouse' },
+      { key: 'crawler',    label: 'Site Crawler' },
+      { key: 'bilingual',  label: 'Bilingual Audit' },
+    ];
+    const impactLabel = { high: '🔴 HIGH', medium: '🟡 MEDIUM', low: '⚪ LOW' };
+    let md = `# Site Diagnostic Report\n\n`;
+    md += `**Site:** ${hostname}  \n**Date:** ${date}  \n**Total findings:** ${total}\n\n`;
+    md += `---\n\n`;
+    md += `This report lists every issue found during the audit, explained in plain English.\n`;
+    md += `Check off each item as it gets fixed.\n\n---\n\n`;
+    SECTIONS.forEach(s => {
+      const sItems = items[s.key] || [];
+      if (!sItems.length) return;
+      md += `## ${s.label}\n\n`;
+      sItems.forEach((item, i) => {
+        md += `### ${i + 1}. ${item.title}\n`;
+        md += `**Priority:** ${impactLabel[item.impact] || item.impact}\n\n`;
+        md += `**What is this?** ${item.term}\n\n`;
+        md += `**Why it matters:** ${item.why}\n\n`;
+        md += `**What needs to change:** ${item.fix}\n\n`;
+        if (item.technical?.detail?.length) {
+          md += `<details>\n<summary>Technical detail (for the person doing the fix)</summary>\n\n`;
+          md += `**${item.technical.label}**\n\n`;
+          item.technical.detail.forEach(d => { const s = typeof d === 'string' ? d : (d?.selector || d?.snippet || d?.label || d?.url || ''); if (s) md += `- \`${s}\`\n`; });
+          md += `\n</details>\n\n`;
+        }
+        md += `- [ ] Fixed\n\n---\n\n`;
+      });
     });
-    const isQuickWin = r => ['high','medium'].includes(r.impact) && r.effort === 'low';
-    const quickwins = recs.filter(isQuickWin).map(toRender);
-    const technical = recs.filter(r => r.source === 'lighthouse').map(toRender);
-    const content = recs.filter(r => ['crawler','gsc'].includes(r.source) && !isQuickWin(r)).map(toRender);
-    const engagement = recs.filter(r => r.source === 'ga4').map(toRender);
-    const bilingual = recs.filter(r => r.source === 'bilingual' || r.category === 'bilingual').map(toRender);
-    return { quickwins, technical, content, engagement, bilingual };
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${hostname}-diagnostic-report-${new Date().toISOString().slice(0,10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Diagnostic Report downloaded');
+  }
+
+  // Recommendations -> tool buckets
+  function bucketRecommendations(recs) {
+    if (!Array.isArray(recs)) return { pulse:[], lighthouse:[], crawler:[], bilingual:[] };
+    const toRender = r => ({
+      action: r.action, source: r.source, impact: r.impact || 'low',
+      effort: r.effort || 'medium', notes: r.notes || '',
+      id: r.id, included: r.included !== false, evidence: r.evidence || ''
+    });
+    return {
+      pulse:      recs.filter(r => ['broad-traffic','gbp','psi'].includes(r.source)).map(toRender),
+      lighthouse: recs.filter(r => r.source === 'lighthouse').map(toRender),
+      crawler:    recs.filter(r => ['crawler','crawl','gsc'].includes(r.source)).map(toRender),
+      bilingual:  recs.filter(r => r.source === 'bilingual' || r.category === 'bilingual').map(toRender),
+    };
+  }
+
+  // Render recommendations as a single four-section checklist
+  function renderRecommendationsChecklist() {
+    const container = document.getElementById('recommendations-checklist');
+    if (!container) return;
+    const recs = captureData('recommendations');
+    if (!recs) {
+      container.innerHTML = `<div style="text-align:center;color:var(--muted);padding:48px 0;font-size:13px">Run Recommendations to populate this checklist.</div>`;
+      return;
+    }
+    const buckets = bucketRecommendations(recs);
+    const SECTIONS = [
+      { key: 'pulse',      label: 'Public Pulse',   empty: 'Run Public Pulse to populate.' },
+      { key: 'lighthouse', label: 'Lighthouse',      empty: 'Run Lighthouse to populate.' },
+      { key: 'crawler',    label: 'Site Crawler',    empty: 'Run Site Crawler to populate.' },
+      { key: 'bilingual',  label: 'Bilingual Audit', empty: 'Run Bilingual Audit to populate.' },
+    ];
+    const impactColor = { high:'var(--fail)', medium:'var(--warn)', low:'var(--muted)' };
+    container.innerHTML = SECTIONS.map(s => {
+      const items = buckets[s.key] || [];
+      const rows = items.length === 0
+        ? `<div class="rec-empty">${s.empty}</div>`
+        : items.map(r => `
+            <div class="rec-item">
+              <input type="checkbox" class="rec-check" data-rec-toggle="${r.id}" ${r.included ? 'checked' : ''}>
+              <div class="rec-body">
+                <div class="rec-action">${r.action}</div>
+                ${r.evidence ? `<div class="rec-evidence">${r.evidence}</div>` : ''}
+                <textarea class="rec-notes edit-field" data-rec-id="${r.id}" rows="1" placeholder="Notes…">${r.notes}</textarea>
+              </div>
+              <div class="rec-impact" style="color:${impactColor[r.impact]||'var(--muted)'}">
+                ${(r.impact||'').toUpperCase()}
+              </div>
+            </div>`).join('');
+      return `
+        <div class="rec-section">
+          <div class="rec-section-header">
+            <span class="rec-section-title">${s.label}</span>
+            <span class="rec-section-count">${items.length} item${items.length !== 1 ? 's' : ''}</span>
+          </div>
+          ${rows}
+        </div>`;
+    }).join('');
   }
 
   // Narrative -> section map
@@ -2359,6 +3171,7 @@
     const def = TOOL_DEFS.find(t => t.id === toolId);
     if (!def) return;
     if (def.isEditor) { goto('edits-hub'); return; }
+    if (def.isDiagnostic) { goto('diagnostic-hub'); return; }
     if (def.needsCredentials) {
       const pid = prompt('Enter GA4 Property ID (e.g. 123456789):\n\nLeave blank to skip GA4.');
       const siteUrl = prompt('Enter GSC Site URL (e.g. https://example.com/):\n\nLeave blank to skip GSC.');
@@ -2409,15 +3222,23 @@
   function renderToolCards() {
     clearGrid("tool-cards");
     const grid = document.getElementById("tool-cards");
-    TOOL_DEFS.forEach(t => {
+    TOOL_DEFS.forEach(t => { try {
       const s = toolStatus(t.id === 'crawler' ? 'crawl' : t.id);
       const card = document.createElement("div");
       card.className = "tool-card";
       const isEditor = t.isEditor;
-      const statusBadge = isEditor ? '<span class="status-pill done"><span class="dot"></span>ready</span>' : `<span class="status-pill ${s.status}"><span class="dot"></span>${s.status}</span>`;
+      const isDiagnostic = t.isDiagnostic;
+      const statusBadge = (isEditor || isDiagnostic) ? '<span class="status-pill done"><span class="dot"></span>ready</span>' : `<span class="status-pill ${s.status}"><span class="dot"></span>${s.status}</span>`;
       const captureCount = isEditor ? Object.values(STATE.workspace?.captures || {}).filter(s => s?.latest).length : 0;
       let statBlock;
-      if (isEditor) {
+      if (isDiagnostic) {
+        let total = 0;
+        try {
+          const diagItems = buildDiagnosticItems();
+          total = Object.values(diagItems).reduce((n, arr) => n + arr.length, 0);
+        } catch(e) { console.warn('[diagnostic card]', e); }
+        statBlock = `<div class="stat"><span class="v">${total > 0 ? total + ' finding' + (total !== 1 ? 's' : '') : 'Run tools first'}</span></div>`;
+      } else if (isEditor) {
         statBlock = `<div class="stat"><span class="v">${captureCount} artifact${captureCount !== 1 ? 's' : ''}</span></div>`;
       } else if (t.id === 'lighthouse' && s.status === 'done') {
         const lhr = captureData('lighthouse');
@@ -2434,7 +3255,7 @@
       const slot = STATE.workspace?.captures?.[toolKey];
       const ts = slot?.latest?.data?.timestamp || slot?.latest?.timestamp || null;
       const tsLabel = ts ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">Last run: ${ts.replace('T',' ').slice(0,16)}</div>` : '';
-      const runButton = isEditor ? '' : `<button class="btn primary sm" data-run="${t.id}" onclick="runTool('${t.id}', event)" style="margin-right:8px">Run</button>`;
+      const runButton = (isEditor || isDiagnostic) ? '' : `<button class="btn primary sm" data-run="${t.id}" onclick="runTool('${t.id}', event)" style="margin-right:8px">Run</button>`;
       card.innerHTML = `
         <div class="top">
           <div><h3>${t.name}</h3><ul class="bullets">${t.bullets.map(b => `<li>${b}</li>`).join("")}</ul>${t.deps ? `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">${t.deps.map(([tool, label]) => { const done = toolStatus(tool).status === 'done'; return `<span style="font-size:11px;color:${done ? 'var(--good)' : 'var(--muted)'}">${done ? '●' : '○'} ${label}</span>`; }).join('')}</div>` : ''}</div>
@@ -2448,7 +3269,7 @@
       `;
       card.addEventListener("click", (e) => { if (e.target.tagName !== 'BUTTON') goto(`${t.id === 'crawler' ? 'crawler' : t.id}-hub`); });
       grid.appendChild(card);
-    });
+    } catch(e) { console.error(`[renderToolCards] card "${t.id}" failed:`, e); } });
   }
 
   function renderSectionCards(sections, parentId, prefix) {
@@ -3233,7 +4054,7 @@
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">robots.txt — raw content</div>
             <button onclick="this.closest('.data-card').querySelector('pre').style.display=this.closest('.data-card').querySelector('pre').style.display==='none'?'block':'none'" style="font-size:11px;background:none;border:1px solid var(--line);color:var(--muted);padding:2px 8px;border-radius:4px;cursor:pointer">toggle</button>
           </div>
-          <pre style="display:none;font-size:11px;font-family:monospace;color:var(--ink-2);white-space:pre-wrap;word-break:break-all;background:var(--surface);padding:10px;border-radius:4px;max-height:300px;overflow-y:auto">${crawl.robotsTxt.raw.replace(/</g,'&lt;')}</pre>`;
+          <pre style="display:none;font-size:11px;font-family:monospace;color:var(--ink-2);white-space:pre-wrap;word-break:break-all;background:var(--surface);padding:10px;border-radius:4px;max-height:300px;overflow-y:auto">${(crawl.robotsTxt.raw || '').replace(/</g,'&lt;')}</pre>`;
         grid.appendChild(rawCard);
       }
     }
@@ -3836,7 +4657,8 @@
     "bilingual-hub", "bilingual-coverage", "bilingual-gaps", "bilingual-hreflang",
     "recommendations-hub", "recommendations-quickwins", "recommendations-technical", "recommendations-content", "recommendations-engagement", "recommendations-bilingual",
     "narrative-hub", "narrative-summary", "narrative-technical", "narrative-content", "narrative-traffic", "narrative-bilingual", "narrative-opportunity",
-    "edits-hub", "edits-editor", "edits-package"
+    "edits-hub", "edits-editor", "edits-package",
+    "diagnostic-hub"
   ];
 
   const CRUMBS = {
@@ -3898,6 +4720,7 @@
     "narrative-traffic": "Workspace / Narrative Report / Traffic & Engagement",
     "narrative-bilingual": "Workspace / Narrative Report / Bilingual Presence",
     "narrative-opportunity": "Workspace / Narrative Report / The Opportunity",
+    "diagnostic-hub": "Workspace / Diagnostic Report",
     "edits-hub": "Workspace / Edits & Exports",
     "edits-editor": "Workspace / Edits & Exports / Editor",
     "edits-package": "Workspace / Edits & Exports / Package Builder"
@@ -4003,6 +4826,61 @@
           download: { filename: `${STATE.hostname}-recommendations.md`, content: mdRecs } });
       }
     }
+
+    // Dev Work Order MD
+    try {
+      const wo = buildDevWorkOrderItems();
+      const woTotal = Object.values(wo).reduce((n, arr) => n + arr.length, 0);
+      if (woTotal > 0) {
+        const date = new Date().toISOString().slice(0, 10);
+        const SECTION_LABELS = { pulse: 'Public Pulse', lighthouse: 'Lighthouse', crawler: 'Site Crawler', bilingual: 'Bilingual Audit' };
+        const priorityLabel = p => p === 'high' ? '🔴 HIGH' : p === 'medium' ? '🟡 MEDIUM' : '⚪ LOW';
+        let md = `# Dev Work Order\n\n**Site:** ${STATE.hostname}\n**Date:** ${date}\n**Total items:** ${woTotal}\n\n---\n\nEvery failing item with exact location. Check off each item as it gets fixed.\n\n---\n\n`;
+        Object.entries(wo).forEach(([key, items]) => {
+          if (!items.length) return;
+          md += `## ${SECTION_LABELS[key] || key} (${items.length} items)\n\n`;
+          items.forEach((item, i) => {
+            md += `### ${i + 1}. ${item.task}\n**Priority:** ${priorityLabel(item.priority)}\n\n`;
+            md += `**Location:** \`${item.location}\`\n\n`;
+            if (item.detail) md += `**Detail:** ${item.detail}\n\n`;
+            md += `- [ ] Fixed\n\n---\n\n`;
+          });
+        });
+        out.push({ id: 'dev-work-order-md', filename: 'dev-work-order.md', tool: 'Dev Work Order', type: 'md',
+          size: `${Math.round(new TextEncoder().encode(md).length / 1024)} KB`, modified: date,
+          download: { filename: `${STATE.hostname}-dev-work-order-${date}.md`, content: md } });
+      }
+    } catch(e) { console.warn('[getArtifacts] dev work order skipped:', e); }
+
+    // Diagnostic Report MD
+    try {
+      const diagItems = buildDiagnosticItems();
+      const total = Object.values(diagItems).reduce((n, arr) => n + arr.length, 0);
+      if (total > 0) {
+        const date = new Date().toISOString().slice(0, 10);
+        const SECTION_LABELS = { pulse: 'Public Pulse', lighthouse: 'Lighthouse', crawler: 'Site Crawler', bilingual: 'Bilingual Audit' };
+        let md = `# Site Diagnostic Report\n\n**Site:** ${STATE.hostname}\n**Date:** ${date}\n**Total findings:** ${total}\n\n---\n\nThis report lists every issue found during the audit, explained in plain English.\nCheck off each item as it gets fixed.\n\n---\n\n`;
+        Object.entries(diagItems).forEach(([key, items]) => {
+          if (!items.length) return;
+          md += `## ${SECTION_LABELS[key] || key}\n\n`;
+          items.forEach((item, i) => {
+            const impact = (item.impact || 'low').toUpperCase();
+            const emoji = item.impact === 'high' ? '🔴' : item.impact === 'medium' ? '🟡' : '⚪';
+            md += `### ${i + 1}. ${item.title}\n**Priority:** ${emoji} ${impact}\n\n`;
+            md += `**What is this?** ${item.term}\n\n**Why it matters:** ${item.why}\n\n**What needs to change:** ${item.fix}\n\n`;
+            if (item.technical?.detail?.length) {
+              md += `<details>\n<summary>Technical detail (for the person doing the fix)</summary>\n\n**${item.technical.label}**\n\n`;
+              item.technical.detail.forEach(d => { const s = typeof d === 'string' ? d : (d?.selector || d?.snippet || d?.label || d?.url || ''); if (s) md += `- \`${s}\`\n`; });
+              md += `\n</details>\n\n`;
+            }
+            md += `- [ ] Fixed\n\n---\n\n`;
+          });
+        });
+        out.push({ id: 'diagnostic-report-md', filename: 'diagnostic-report.md', tool: 'Diagnostic Report', type: 'md',
+          size: `${Math.round(new TextEncoder().encode(md).length / 1024)} KB`, modified: date,
+          download: { filename: `${STATE.hostname}-diagnostic-report-${date}.md`, content: md } });
+      }
+    } catch(e) { console.warn('[getArtifacts] diagnostic report skipped:', e); }
 
     return out;
   }
@@ -4236,8 +5114,116 @@
     setTimeout(() => { filesEl.style.outline = ''; filesEl.style.borderRadius = ''; }, 1800);
   }
 
-  function packageDownload() {
-    showToast('Zip assembly not yet built — coming next', true);
+  async function packageDownload() {
+    const pkg = EDITS_STATE.selectedPackage;
+    if (!pkg) { showToast('Select a package first', true); return; }
+    if (typeof JSZip === 'undefined') { showToast('JSZip not loaded — check your connection', true); return; }
+
+    const btn = document.querySelector('[onclick="packageDownload()"]');
+    const origText = btn ? btn.textContent : '';
+    if (btn) { btn.textContent = 'Building…'; btn.disabled = true; }
+
+    try {
+      const zip = new JSZip();
+      const hostname = STATE.hostname || 'workspace';
+      const artifacts = getArtifacts();
+
+      // Decide which artifacts go into this package
+      let toInclude = [];
+      if (pkg.id === 'full-dump') {
+        toInclude = artifacts; // everything
+      } else {
+        toInclude = artifacts.filter(a =>
+          pkg.files.some(f =>
+            f === a.filename ||
+            (f === 'screenshots/*.png' && a.type === 'folder')
+          )
+        );
+      }
+
+      if (!toInclude.length) {
+        showToast('No captures found — load a workspace and run the audit tools first', true);
+        return;
+      }
+      showToast(`Packing ${toInclude.length} file${toInclude.length !== 1 ? 's' : ''}…`);
+
+      for (const artifact of toInclude) {
+        // JSON captures
+        if (artifact.type === 'json' && artifact.data !== undefined) {
+          zip.file(artifact.filename, JSON.stringify(artifact.data, null, 2));
+
+        // Markdown files (narrative, recommendations)
+        } else if (artifact.download) {
+          zip.file(artifact.filename, artifact.download.content);
+
+        // Lighthouse HTML report
+        } else if (artifact.type === 'html' && artifact.href) {
+          try {
+            const res = await fetch(artifact.href);
+            if (res.ok) zip.file(artifact.filename, await res.text());
+          } catch (e) { /* skip if not available */ }
+
+        // Screenshots folder
+        } else if (artifact.type === 'folder') {
+          const shots = STATE.workspace?.captures?.crawl?.latest?.data?.screenshots || [];
+          if (shots.length) {
+            const folder = zip.folder('screenshots');
+            // Deduplicate — old crawls may store the same path twice
+            const seen = new Set();
+            for (const shotPath of shots) {
+              // Normalise: handle both URL paths (/reports/...) and absolute Windows paths
+              let urlPath;
+              if (shotPath.startsWith('http')) {
+                urlPath = shotPath;
+              } else if (shotPath.startsWith('/reports/')) {
+                urlPath = `${location.origin}${shotPath}`;
+              } else {
+                // Absolute file path — extract everything from /reports/ onward
+                const normalised = shotPath.replace(/\\/g, '/');
+                const idx = normalised.indexOf('/reports/');
+                urlPath = idx !== -1
+                  ? `${location.origin}${normalised.slice(idx)}`
+                  : `${location.origin}/reports/${STATE.hostname}/screenshots/${normalised.split('/').pop()}`;
+              }
+              if (seen.has(urlPath)) continue;
+              seen.add(urlPath);
+              try {
+                const res = await fetch(urlPath);
+                if (res.ok) {
+                  const blob = await res.blob();
+                  const name = urlPath.split('/').pop();
+                  folder.file(name, blob);
+                }
+              } catch (e) {
+                console.error('[packageDownload] screenshot fetch failed:', urlPath, e);
+              }
+            }
+          }
+        }
+      }
+
+      const blob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${hostname}-${pkg.id}-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`${pkg.name} downloaded`);
+
+    } catch (err) {
+      console.error('[packageDownload]', err);
+      showToast('Download failed — check console', true);
+    } finally {
+      if (btn) { btn.textContent = origText; btn.disabled = false; }
+    }
   }
 
   function renderPackageBuilder() {
@@ -4328,13 +5314,8 @@
     renderBilingualCoverage();
     renderBilingualGaps();
     renderBilingualHreflang();
-    const recs = bucketRecommendations(captureData('recommendations'));
-    renderRecommendationSectionCards(recs, "recommendations-sections");
-    renderRecommendationCards(recs.quickwins, "recommendations-quickwins-data");
-    renderRecommendationCards(recs.technical, "recommendations-technical-data");
-    renderRecommendationCards(recs.content, "recommendations-content-data");
-    renderRecommendationCards(recs.engagement, "recommendations-engagement-data");
-    renderRecommendationCards(recs.bilingual, "recommendations-bilingual-data");
+    renderRecommendationsChecklist();
+    renderDiagnosticReport();
     renderSectionCards(NARRATIVE_SECTIONS, "narrative-sections", "narrative");
     const nMap = narrativeSectionMap(captureData('narrative'));
     renderNarrativeSingle("narrative-summary-data", nMap.summary);
@@ -4358,6 +5339,8 @@
     handleLoadWorkspace();
   }
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 </body>
 </html>
